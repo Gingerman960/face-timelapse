@@ -18,6 +18,14 @@ asarUnpack:
   - node_modules/sharp/**
   - node_modules/@tensorflow/tfjs-backend-wasm/**
 
+# electron-updater reads this `publish` block to know where to look for
+# release artifacts. On `electron-builder --publish always` (used by the
+# release workflow) it also pushes artifacts to GitHub Releases.
+publish:
+  provider: github
+  owner: Gingerman960
+  repo: face-timelapse
+
 mac:
   icon: assets/icon.icns
   target:
@@ -26,6 +34,13 @@ mac:
         - x64
         - arm64
   category: public.app-category.photography
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  category: Graphics
 
 win:
   target:

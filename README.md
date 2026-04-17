@@ -18,14 +18,14 @@ A cross-platform desktop app that aligns a face across many photos and exports t
 
 ## Screenshots
 
-Add screenshots to `assets/` and link them here once the UI is captured:
+| | |
+|:---:|:---:|
+| **Setup** — pick reference + crop | **Scanning** — parallel face detection |
+| ![Setup](./assets/screenshots/setup.png) | ![Scanning](./assets/screenshots/scanning.png) |
+| **Daily selection** — one photo per day | **Results** — aligned timelapse |
+| ![Daily selection](./assets/screenshots/daily-selection.png) | ![Results](./assets/screenshots/results.png) |
 
-```
-assets/
-├── screenshot-setup.png
-├── screenshot-scan.png
-└── screenshot-result.gif
-```
+_See [`assets/screenshots/README.md`](./assets/screenshots/README.md) for how to capture + add these._
 
 ## Install
 

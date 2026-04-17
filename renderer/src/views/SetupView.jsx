@@ -217,6 +217,23 @@ export default function SetupView() {
     setStep('scanning')
   }
 
+  const handleClearCache = async () => {
+    if (!sourceFolderPath || !referenceEmbedding) return
+    const ok = window.confirm(
+      'Clear the cached scan results for this folder and reference photo? ' +
+      'The next scan will re-process every photo from scratch.'
+    )
+    if (!ok) return
+    try {
+      await window.electronAPI.clearScanCache({
+        folderPath: sourceFolderPath,
+        referenceEmbedding,
+      })
+    } catch (err) {
+      setError(err.message || 'Failed to clear scan cache')
+    }
+  }
+
   const handleReset = () => {
     // Restore original image (undo alignment), reset crop
     if (originalImagePathRef.current && originalImagePathRef.current !== referenceImagePath) {
@@ -608,6 +625,15 @@ export default function SetupView() {
             Choose Folder
           </button>
           {sourceFolderPath && <div className="path-display">{sourceFolderPath}</div>}
+          {sourceFolderPath && referenceEmbedding && (
+            <button
+              className="btn btn-ghost btn-sm m-t-8"
+              onClick={handleClearCache}
+              title="Delete the cached results for this folder + reference photo so the next scan runs from scratch"
+            >
+              Rescan from scratch
+            </button>
+          )}
         </div>
 
         <div className="setup-section">

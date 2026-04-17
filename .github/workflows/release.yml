@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Lets electron-builder create a draft release + upload artifacts.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & publish (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            build: npm run build:mac -- --publish always
+          - os: windows-latest
+            build: npm run build:win -- --publish always
+          - os: ubuntu-latest
+            build: npx electron-builder --linux --publish always
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps for node-canvas (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download face-api models
+        run: npm run download-models
+
+      - name: Build + publish
+        env:
+          # Required for GitHub Releases publish
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # macOS signing + notarization (optional — unsigned if unset)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+          # Windows signing (optional — unsigned if unset)
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: ${{ matrix.build }}

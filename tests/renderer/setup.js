@@ -24,6 +24,7 @@ beforeEach(() => {
     }),
     startScan: vi.fn().mockResolvedValue([]),
     cancelScan: vi.fn().mockResolvedValue(undefined),
+    clearScanCache: vi.fn().mockResolvedValue(true),
     onScanProgress: vi.fn().mockReturnValue(() => {}),
     alignBatch: vi.fn().mockResolvedValue([]),
     cancelAlign: vi.fn().mockResolvedValue(undefined),

@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron')
+const { autoUpdater } = require('electron-updater')
 
 // Must be called before app is ready
 protocol.registerSchemesAsPrivileged([
@@ -129,6 +130,30 @@ app.whenReady().then(async () => {
   }
 
   createWindow()
+
+  // Auto-update. Only runs in packaged builds (dev launches don't have an
+  // update feed). Logs through electron-log-compatible console so failures
+  // are visible in the user's app log.
+  if (app.isPackaged) {
+    try {
+      autoUpdater.autoDownload = true
+      autoUpdater.autoInstallOnAppQuit = true
+      autoUpdater.on('update-available', (info) => {
+        console.log(`Update available: ${info.version}`)
+      })
+      autoUpdater.on('update-downloaded', (info) => {
+        console.log(`Update downloaded: ${info.version} — will install on next quit`)
+      })
+      autoUpdater.on('error', (err) => {
+        // Don't surface this to the user — failing to *find* an update
+        // shouldn't block normal usage.
+        console.warn('autoUpdater error:', err.message)
+      })
+      autoUpdater.checkForUpdatesAndNotify().catch(() => {})
+    } catch (err) {
+      console.warn('autoUpdater init failed:', err.message)
+    }
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

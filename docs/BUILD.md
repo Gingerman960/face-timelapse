@@ -143,4 +143,38 @@ The WASM fallback always works even if you try to force a backend that isn't ins
 
 ## CI builds
 
-The repo's GitHub Actions workflow (`.github/workflows/ci.yml`) runs unit tests on Linux only. To build release installers in CI, add platform-specific jobs that run on `macos-latest` and `windows-latest` with the signing env vars wired up via GitHub Secrets.
+Two workflows live in `.github/workflows/`:
+
+- **`ci.yml`** — runs unit tests on Ubuntu + macOS + Windows × Node 18/20 on every push and PR
+- **`release.yml`** — triggered by tag push (`v*`), builds + publishes signed installers on macOS/Windows/Linux, uploads to GitHub Releases
+
+## Publishing a release
+
+1. Bump `package.json` version.
+2. Commit: `git commit -am "chore: release v1.2.0"`
+3. Tag: `git tag v1.2.0`
+4. Push: `git push origin main --tags`
+
+GitHub Actions will build on all three platforms in parallel and create a **draft** GitHub Release with artifacts attached. Review the draft, then publish it. Users of prior versions will auto-update on next launch (see `autoUpdater.checkForUpdatesAndNotify()` in `electron/main.js`).
+
+### Required GitHub Secrets (for signed releases)
+
+Add these in the repo settings (Settings → Secrets and variables → Actions). All are optional — if absent, the workflow produces unsigned builds.
+
+| Secret | For | Contents |
+|---|---|---|
+| `APPLE_ID` | macOS notarization | Apple ID email |
+| `APPLE_APP_SPECIFIC_PASSWORD` | macOS notarization | App-specific password from appleid.apple.com |
+| `APPLE_TEAM_ID` | macOS notarization | 10-char team ID |
+| `CSC_LINK` | macOS signing | Base64-encoded .p12 certificate |
+| `CSC_KEY_PASSWORD` | macOS signing | .p12 password |
+| `WIN_CSC_LINK` | Windows signing | Base64-encoded .pfx certificate |
+| `WIN_CSC_KEY_PASSWORD` | Windows signing | .pfx password |
+
+`GITHUB_TOKEN` is auto-provided by Actions; no need to set it manually.
+
+## Auto-update
+
+The app calls `autoUpdater.checkForUpdatesAndNotify()` at startup in packaged builds only. It reads from `electron-builder.yml`'s `publish` block (configured for GitHub Releases). When a newer tagged release is published, users get the update downloaded in the background and installed on next quit.
+
+Auto-update only works for macOS if the app is signed + notarized. Unsigned macOS builds can still check for updates but won't apply them.
