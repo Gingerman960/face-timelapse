@@ -7,6 +7,10 @@ const { generateEmbedding, compareFaces, categorize } = require('./faceEmbedding
 
 const SUPPORTED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.heic', '.tiff', '.tif', '.webp'])
 
+// Match the alignment worker watchdog so a misconfigured install can't hang
+// the scan step forever.
+const WORKER_READY_TIMEOUT_MS = 30_000
+
 /**
  * Scan a folder for photos matching the reference face.
  * Port of PhotoScannerService.swift adapted for filesystem folders.
@@ -18,9 +22,6 @@ const SUPPORTED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.heic', '.tiff',
  * @returns {Promise<PhotoCandidate[]>}
  */
 async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToken, onProgress) {
-  const sharp = require('sharp')
-  const exifr = require('exifr')
-
   // Collect all supported image files
   const allFiles = listImageFiles(folderPath)
   const total = allFiles.length
@@ -32,18 +33,31 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
   const { Worker } = require('worker_threads')
   const os = require('os')
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let currentIndex = 0
     let completed = 0
     let confirmedCount = 0
     let uncertainCount = 0
+    let settled = false
 
     const numCpus = Math.max(1, os.cpus().length - 1)
     const maxWorkers = Math.min(numCpus, allFiles.length)
     const workers = []
+    const readyTimeouts = new Map()
+
+    const finish = (reason, err) => {
+      if (settled) return
+      settled = true
+      for (const t of readyTimeouts.values()) clearTimeout(t)
+      workers.forEach((w) => { try { w.terminate() } catch (_) {} })
+      if (reason === 'error') return reject(err)
+      candidates.sort((a, b) => b.similarityScore - a.similarityScore)
+      resolve(candidates)
+    }
 
     const assignTask = (worker) => {
-      if (cancelToken.cancelled || currentIndex >= allFiles.length) return false
+      if (cancelToken.cancelled) { finish('cancelled'); return false }
+      if (currentIndex >= allFiles.length) return false
 
       const idx = currentIndex++
       const filePath = allFiles[idx]
@@ -58,9 +72,7 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
 
     const checkComplete = () => {
       if (cancelToken.cancelled || completed === allFiles.length) {
-        workers.forEach(w => w.terminate())
-        candidates.sort((a, b) => b.similarityScore - a.similarityScore)
-        resolve(candidates)
+        finish('done')
       }
     }
 
@@ -69,8 +81,18 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
         workerData: { modelsPath }
       })
 
+      const readyTimer = setTimeout(() => {
+        finish('error', new Error(
+          `Scan worker did not initialize within ${WORKER_READY_TIMEOUT_MS / 1000}s. ` +
+          `Check that models are present (run "npm run download-models").`
+        ))
+      }, WORKER_READY_TIMEOUT_MS)
+      readyTimeouts.set(worker, readyTimer)
+
       worker.on('message', (msg) => {
         if (msg.type === 'ready') {
+          const t = readyTimeouts.get(worker)
+          if (t) { clearTimeout(t); readyTimeouts.delete(worker) }
           assignTask(worker)
         } else if (msg.type === 'result') {
           candidates.push(msg.result)
@@ -103,14 +125,15 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
           completed++
           if (!assignTask(worker)) checkComplete()
         } else if (msg.type === 'error') {
-          console.error(`Scan worker error:`, msg.error)
+          console.error('Scan worker init error:', msg.error)
+          finish('error', new Error(`Scan worker failed to initialize: ${msg.error}`))
         }
       })
 
       worker.on('error', (err) => {
         // A worker crash forfeits the in-flight task. We still advance `completed`
         // so the scan can terminate rather than hanging on a lost slot.
-        console.error(`Scan worker crashed:`, err)
+        console.error('Scan worker crashed:', err)
         completed++
         checkComplete()
       })

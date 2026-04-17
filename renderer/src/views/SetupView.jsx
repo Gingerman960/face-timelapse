@@ -226,12 +226,15 @@ export default function SetupView() {
     }
   }
 
-  // Align Face: straighten the image so eyes are level
+  // Align Face: straighten the image so eyes are level.
+  // Always operate on the originally chosen file so clicking twice doesn't
+  // compound rotations on top of an already-straightened temp file.
   const handleAlignFace = async () => {
     if (!referenceImagePath || !rawImageSize || aligningFace) return
+    const sourcePath = originalImagePathRef.current || referenceImagePath
     setAligningFace(true)
     try {
-      const result = await window.electronAPI.detectFaceBounds(referenceImagePath)
+      const result = await window.electronAPI.detectFaceBounds(sourcePath)
       if (!result) return
 
       const { leftEye, rightEye } = result
@@ -241,10 +244,13 @@ export default function SetupView() {
 
       if (Math.abs(angleDeg) > 0.3) {
         const straightened = await window.electronAPI.straightenImage({
-          imagePath: referenceImagePath,
+          imagePath: sourcePath,
           angleDegrees: angleDeg,
         })
         setReferenceImagePath(straightened.filePath)
+      } else if (sourcePath !== referenceImagePath) {
+        // Original is already straight; drop any prior straightened temp.
+        setReferenceImagePath(sourcePath)
       }
     } catch {
       // silently keep current image

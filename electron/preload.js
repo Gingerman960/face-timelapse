@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Alignment
   alignBatch: (params) => ipcRenderer.invoke('face:alignBatch', params),
+  cancelAlign: () => ipcRenderer.invoke('face:cancelAlign'),
   onAlignProgress: (callback) => {
     const listener = (event, data) => callback(data)
     ipcRenderer.on('align:progress', listener)

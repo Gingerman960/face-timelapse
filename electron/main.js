@@ -16,14 +16,46 @@ const { scanFolder } = require('./services/photoScanner')
 const { exportToFolder } = require('./services/exportService')
 const { createVideo } = require('./services/videoExport')
 
+// How long we wait for a worker thread to emit its `ready` message
+// before deciding initialization has failed. Keeps a misconfigured
+// install from hanging the alignment step forever.
+const WORKER_READY_TIMEOUT_MS = 30_000
+
 let mainWindow = null
-let cancelToken = { cancelled: false }
+let scanCancelToken = { cancelled: false }
+let alignCancelToken = { cancelled: false }
 
 function getModelsPath() {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, 'models')
   }
   return path.join(__dirname, '../models')
+}
+
+function getTempDir() {
+  return path.join(os.tmpdir(), 'facetimelapse')
+}
+
+// Best-effort removal of every file we've ever written to the app's temp dir.
+// Called on startup (leftovers from previous runs) and on quit.
+function cleanupTempFiles() {
+  const tmpDir = getTempDir()
+  try {
+    if (!fs.existsSync(tmpDir)) return
+    for (const name of fs.readdirSync(tmpDir)) {
+      try { fs.unlinkSync(path.join(tmpDir, name)) } catch (_) {}
+    }
+  } catch (_) {}
+
+  // Straighten temp files land directly in os.tmpdir() with a known prefix.
+  try {
+    const root = os.tmpdir()
+    for (const name of fs.readdirSync(root)) {
+      if (name.startsWith('facetimelapse-straightened-')) {
+        try { fs.unlinkSync(path.join(root, name)) } catch (_) {}
+      }
+    }
+  } catch (_) {}
 }
 
 async function createWindow() {
@@ -56,6 +88,8 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  cleanupTempFiles()
+
   // Serve local files via safe-file:// to avoid file:// being blocked by the renderer.
   // With standard: true, the URL 'safe-file:///Users/foo' is parsed by Chromium as
   // host='users' + pathname='/foo', so we reconstruct the path as '/' + host + pathname.
@@ -90,19 +124,13 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
+app.on('will-quit', cleanupTempFiles)
+
 // --- IPC Handlers ---
 
 // Set reference photo: crop via sharp, detect face, return embedding + preview base64
 ipcMain.handle('face:setReference', async (event, { imagePath, cropParams, aspectRatio, rotationAngle }) => {
   const sharp = require('sharp')
-  const OUTPUT_SIZES = {
-    '1:1': { w: 512, h: 512 },
-    '4:3': { w: 512, h: 384 },
-    '16:9': { w: 512, h: 288 },
-    '9:16': { w: 288, h: 512 },
-    '3:4': { w: 384, h: 512 },
-  }
-
   let pipeline = sharp(imagePath).rotate() // auto-orient from EXIF
 
   // Apply face-straightening rotation if provided
@@ -148,14 +176,14 @@ ipcMain.handle('face:setReference', async (event, { imagePath, cropParams, aspec
 
 // Start folder scan
 ipcMain.handle('face:startScan', async (event, { folderPath, referenceEmbedding }) => {
-  cancelToken = { cancelled: false }
+  scanCancelToken = { cancelled: false }
 
   let lastProgressTime = 0
   const results = await scanFolder(
     folderPath,
     referenceEmbedding,
     getModelsPath(),
-    cancelToken,
+    scanCancelToken,
     (progress) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         const now = Date.now()
@@ -173,28 +201,47 @@ ipcMain.handle('face:startScan', async (event, { folderPath, referenceEmbedding 
 
 // Cancel scan
 ipcMain.handle('face:cancelScan', async () => {
-  cancelToken.cancelled = true
+  scanCancelToken.cancelled = true
+})
+
+// Cancel alignment: terminate worker pool and resolve with partial results.
+ipcMain.handle('face:cancelAlign', async () => {
+  alignCancelToken.cancelled = true
 })
 
 // Align a batch of photos using worker threads
 ipcMain.handle('face:alignBatch', async (event, { candidates, referenceAlignmentPoints, referenceImageSize, outputSize }) => {
   const { Worker } = require('worker_threads')
-  const tmpDir = path.join(os.tmpdir(), 'facetimelapse')
+  const tmpDir = getTempDir()
   fs.mkdirSync(tmpDir, { recursive: true })
+
+  alignCancelToken = { cancelled: false }
 
   const results = new Array(candidates.length)
   const total = candidates.length
   let completed = 0
+  let settled = false
 
   const numCpus = Math.max(1, os.cpus().length - 1) // Leave one core for main thread
   const maxWorkers = Math.min(numCpus, candidates.length)
   let currentIndex = 0
   let lastProgressTime = 0
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const workers = []
+    const readyTimeouts = new Map()
+
+    const finish = (reason, err) => {
+      if (settled) return
+      settled = true
+      for (const t of readyTimeouts.values()) clearTimeout(t)
+      workers.forEach((w) => { try { w.terminate() } catch (_) {} })
+      if (reason === 'error') reject(err)
+      else resolve(results.filter((r) => r !== undefined))
+    }
 
     const assignTask = (worker) => {
+      if (alignCancelToken.cancelled) { finish('cancelled'); return false }
       if (currentIndex >= candidates.length) return false
       const idx = currentIndex++
       worker.postMessage({
@@ -213,8 +260,22 @@ ipcMain.handle('face:alignBatch', async (event, { candidates, referenceAlignment
         workerData: { modelsPath: getModelsPath() }
       })
 
+      // Watchdog: if a worker never emits `ready`, fail the whole batch
+      // rather than hanging. Triggered most often when models fail to load.
+      const readyTimer = setTimeout(() => {
+        finish('error', new Error(
+          `Alignment worker did not initialize within ${WORKER_READY_TIMEOUT_MS / 1000}s. ` +
+          `Check that models are present (run "npm run download-models").`
+        ))
+      }, WORKER_READY_TIMEOUT_MS)
+      readyTimeouts.set(worker, readyTimer)
+
       worker.on('message', (msg) => {
+        if (alignCancelToken.cancelled) { finish('cancelled'); return }
+
         if (msg.type === 'ready') {
+          const t = readyTimeouts.get(worker)
+          if (t) { clearTimeout(t); readyTimeouts.delete(worker) }
           assignTask(worker)
         } else if (msg.type === 'result') {
           results[msg.index] = msg.result
@@ -235,20 +296,21 @@ ipcMain.handle('face:alignBatch', async (event, { candidates, referenceAlignment
           }
 
           if (completed === total) {
-            workers.forEach(w => w.terminate())
-            resolve(results)
+            finish('done')
           } else {
             assignTask(worker)
           }
         } else if (msg.type === 'error') {
-          console.error(`Worker init error:`, msg.error)
+          console.error('Worker init error:', msg.error)
+          finish('error', new Error(`Alignment worker failed to initialize: ${msg.error}`))
         }
       })
 
       worker.on('error', (err) => {
-        console.error(`Worker threw hard error:`, err)
-        // If a worker crashes hard, we could respawn it, but for now we just log it.
-        // It shouldn't crash unless there is an out of memory exception.
+        console.error('Alignment worker crashed:', err)
+        // A single worker crash forfeits the batch — the renderer surfaces
+        // the error and the user can retry once the underlying cause is fixed.
+        finish('error', err)
       })
 
       workers.push(worker)
@@ -260,8 +322,6 @@ ipcMain.handle('face:alignBatch', async (event, { candidates, referenceAlignment
     }
   })
 })
-
-// Replaced with worker threads above
 
 // Export video
 ipcMain.handle('video:export', async (event, { imagePaths, outputPath, fps, totalDuration }) => {
@@ -311,7 +371,6 @@ ipcMain.handle('dialog:chooseFile', async (event, { filters } = {}) => {
 // Straighten image: rotate by given angle, save to temp file, return new path
 ipcMain.handle('image:straighten', async (event, { imagePath, angleDegrees }) => {
   const sharp = require('sharp')
-  const os = require('os')
   const tmpPath = path.join(os.tmpdir(), `facetimelapse-straightened-${Date.now()}.jpg`)
   await sharp(imagePath)
     .rotate()  // auto-orient from EXIF

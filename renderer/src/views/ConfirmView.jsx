@@ -16,12 +16,23 @@ export default function ConfirmView() {
 
   const current = uncertain[0]
 
+  // Keep the thumbnail cache bounded — base64 JPEGs add up fast on long review sessions.
+  const THUMB_CACHE_CAP = 30
+
   // Load thumbnail for current
   useEffect(() => {
     if (!current) return
     if (thumbs[current.filePath]) return
     window.electronAPI.getImageBase64(current.filePath).then((b64) => {
-      setThumbs((t) => ({ ...t, [current.filePath]: b64 }))
+      setThumbs((t) => {
+        const next = { ...t, [current.filePath]: b64 }
+        const keys = Object.keys(next)
+        if (keys.length <= THUMB_CACHE_CAP) return next
+        // Drop oldest keys (insertion order is preserved in modern JS engines)
+        const trimmed = {}
+        for (const k of keys.slice(keys.length - THUMB_CACHE_CAP)) trimmed[k] = next[k]
+        return trimmed
+      })
     })
   }, [current?.filePath])
 

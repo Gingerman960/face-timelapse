@@ -53,10 +53,20 @@ export default function DailySelectionView() {
     return months
   }, [dailyGroups])
 
+  // Cap thumbnail cache — base64 JPEGs of thousands of photos exhaust renderer memory.
+  const THUMB_CACHE_CAP = 300
+
   const loadThumb = async (filePath) => {
     if (thumbCache[filePath]) return
     const b64 = await window.electronAPI.getImageBase64(filePath)
-    setThumbCache((c) => ({ ...c, [filePath]: b64 }))
+    setThumbCache((c) => {
+      const next = { ...c, [filePath]: b64 }
+      const keys = Object.keys(next)
+      if (keys.length <= THUMB_CACHE_CAP) return next
+      const trimmed = {}
+      for (const k of keys.slice(keys.length - THUMB_CACHE_CAP)) trimmed[k] = next[k]
+      return trimmed
+    })
   }
 
   useEffect(() => {
