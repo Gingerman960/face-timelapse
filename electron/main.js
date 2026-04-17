@@ -9,10 +9,11 @@ const os = require('os')
 const fs = require('fs')
 
 // Services
-const { initFaceDetection, detectFaceFromBuffer } = require('./services/faceDetection')
+const { initFaceDetection, detectFaceFromBuffer, getActiveBackend } = require('./services/faceDetection')
 const { generateEmbedding } = require('./services/faceEmbedding')
 const { alignImage, scalePoints } = require('./services/alignment')
 const { scanFolder } = require('./services/photoScanner')
+const scanCache = require('./services/scanCache')
 const { exportToFolder } = require('./services/exportService')
 const { createVideo } = require('./services/videoExport')
 
@@ -34,6 +35,11 @@ function getModelsPath() {
 
 function getTempDir() {
   return path.join(os.tmpdir(), 'facetimelapse')
+}
+
+function getScanCacheDir() {
+  // Kept in the user data dir so it survives app updates and is per-user.
+  return path.join(app.getPath('userData'), 'scans')
 }
 
 // Best-effort removal of every file we've ever written to the app's temp dir.
@@ -90,6 +96,15 @@ async function createWindow() {
 app.whenReady().then(async () => {
   cleanupTempFiles()
 
+  // Drop scan caches older than 30 days so they don't accumulate forever
+  // in the user data dir.
+  try {
+    const pruned = scanCache.pruneOld(getScanCacheDir())
+    if (pruned > 0) console.log(`Pruned ${pruned} stale scan cache(s)`)
+  } catch (err) {
+    console.warn('scan cache prune failed:', err.message)
+  }
+
   // Serve local files via safe-file:// to avoid file:// being blocked by the renderer.
   // With standard: true, the URL 'safe-file:///Users/foo' is parsed by Chromium as
   // host='users' + pathname='/foo', so we reconstruct the path as '/' + host + pathname.
@@ -108,7 +123,7 @@ app.whenReady().then(async () => {
 
   try {
     await initFaceDetection(getModelsPath())
-    console.log('Face detection models loaded')
+    console.log(`Face detection models loaded (backend: ${getActiveBackend() || 'unknown'})`)
   } catch (err) {
     console.error('Failed to load face detection models:', err)
   }
@@ -193,10 +208,29 @@ ipcMain.handle('face:startScan', async (event, { folderPath, referenceEmbedding 
           mainWindow.webContents.send('scan:progress', progress)
         }
       }
-    }
+    },
+    getScanCacheDir()
   )
 
   return results
+})
+
+// Remove the cache for a specific (folder, reference) pair. Exposed so the
+// user can force a full rescan when they suspect a stale cache — wire this
+// up to a menu or settings panel later.
+ipcMain.handle('face:clearScanCache', async (_, { folderPath, referenceEmbedding } = {}) => {
+  if (!folderPath) return false
+  const key = scanCache.cacheKey(folderPath, referenceEmbedding)
+  const file = scanCache.cacheFilePath(getScanCacheDir(), key)
+  try {
+    if (fs.existsSync(file)) {
+      fs.unlinkSync(file)
+      return true
+    }
+  } catch (err) {
+    console.warn('clearScanCache failed:', err.message)
+  }
+  return false
 })
 
 // Cancel scan

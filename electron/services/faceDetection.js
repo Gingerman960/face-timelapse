@@ -1,10 +1,14 @@
 'use strict'
 
 const { createCanvas, loadImage, Image, ImageData, Canvas } = require('canvas')
-// Use the WASM-backed version — works in Electron without native compilation
-const faceapi = require('@vladmandic/face-api/dist/face-api.node-wasm')
+const { loadFaceApiBackend } = require('./faceApiBackend')
 
+// Resolved on first call to initFaceDetection(). Each worker thread and
+// the main process resolve independently, so the backend choice is
+// per-process and we only ever pay the require() cost once.
+let faceapi = null
 let modelsLoaded = false
+let activeBackend = null
 
 /**
  * Initialize face-api.js with node-canvas and load model weights from disk.
@@ -13,16 +17,31 @@ let modelsLoaded = false
 async function initFaceDetection(modelsPath) {
   if (modelsLoaded) return
 
+  if (!faceapi) {
+    const resolved = loadFaceApiBackend()
+    faceapi = resolved.faceapi
+    activeBackend = resolved.backend
+  }
+
   // Monkey-patch globals so face-api can use node-canvas
   faceapi.env.monkeyPatch({ Canvas, Image, ImageData })
 
-  // Wait for WASM backend to initialize
+  // Wait for the tf backend (WASM / native / GPU) to initialize.
   await faceapi.tf.ready()
 
   await faceapi.nets.ssdMobilenetv1.loadFromDisk(modelsPath)
   await faceapi.nets.faceLandmark68Net.loadFromDisk(modelsPath)
 
   modelsLoaded = true
+}
+
+/**
+ * Returns the backend that was selected at init time, or null if init
+ * hasn't run yet. Useful for diagnostics and for tests that want to
+ * assert the fallback path was taken.
+ */
+function getActiveBackend() {
+  return activeBackend
 }
 
 /**
@@ -107,4 +126,4 @@ function loadImageAsBase64(filePath) {
   return data.toString('base64')
 }
 
-module.exports = { initFaceDetection, detectFaceFromBuffer, extractAlignmentPoints, loadImageAsBase64 }
+module.exports = { initFaceDetection, detectFaceFromBuffer, extractAlignmentPoints, loadImageAsBase64, getActiveBackend }

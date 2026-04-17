@@ -106,16 +106,21 @@ npm test
 
 Current coverage is intentionally minimal (Stage A): pure-logic modules only. Native-dependent modules (face detection, workers, ffmpeg) are not unit-tested.
 
+## Faster detection (optional)
+
+Detection runs on WASM by default — works on all three platforms with zero setup. If you want faster inference on large libraries:
+
+- **Native CPU** (macOS/Windows/Linux): `npm install --save-optional @tensorflow/tfjs-node`
+- **NVIDIA GPU** (Linux/Windows with CUDA): `npm install --save-optional @tensorflow/tfjs-node-gpu`
+
+The app auto-detects which backend is available and logs the choice at startup. See [docs/BUILD.md](./docs/BUILD.md#faster-face-detection-optional) for details. A Core ML path for macOS GPU is tracked as future work.
+
 ## Roadmap
 
-Things not in this release that are worth doing:
-
 - Playwright E2E for the scan → align → export happy path
-- GitHub Actions CI (lint + test on Linux, test on macOS/Windows)
-- Integration tests that actually load the models and run detection
-- Code-signing & notarization docs for macOS/Windows distribution
-- Incremental/resumable scans for large libraries
-- GPU-accelerated detection (tfjs-node-gpu)
+- Core ML / Apple Vision bridge for macOS GPU inference
+- Incremental/resumable scans for large libraries (partial support today via local cache)
+- Code-signing & notarization automation for macOS/Windows distribution
 
 PRs welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 

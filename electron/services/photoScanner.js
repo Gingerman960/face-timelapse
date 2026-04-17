@@ -2,8 +2,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { detectFaceFromBuffer } = require('./faceDetection')
-const { generateEmbedding, compareFaces, categorize } = require('./faceEmbedding')
+const scanCache = require('./scanCache')
 
 const SUPPORTED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.heic', '.tiff', '.tif', '.webp'])
 
@@ -11,24 +10,77 @@ const SUPPORTED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.heic', '.tiff',
 // the scan step forever.
 const WORKER_READY_TIMEOUT_MS = 30_000
 
+// How many new-entry writes to accumulate before flushing the cache file.
+// Lower = safer on crash, higher = less I/O. 25 is a fine balance for
+// thousand-photo scans on spinning disks.
+const CACHE_FLUSH_INTERVAL = 25
+
 /**
  * Scan a folder for photos matching the reference face.
- * Port of PhotoScannerService.swift adapted for filesystem folders.
  *
- * @param {string} folderPath - Folder to scan
- * @param {number[]} referenceEmbedding - 45-feature embedding of reference face
- * @param {{ cancelled: boolean }} cancelToken - Shared cancel flag
- * @param {Function} onProgress - Called with progress object per photo
- * @returns {Promise<PhotoCandidate[]>}
+ * Supports resumable scans via an optional cacheDir: the second run against
+ * the same folder + same reference photo will skip files whose mtime hasn't
+ * changed since the last scan, preserving their embedding / similarity /
+ * creationDate from cache.
+ *
+ * @param {string} folderPath
+ * @param {number[]} referenceEmbedding
+ * @param {string} modelsPath
+ * @param {{ cancelled: boolean }} cancelToken
+ * @param {Function} onProgress  called with { index, total, filename, thumbnailBase64, status, confirmed, uncertain, cached }
+ * @param {string|null} cacheDir  directory to persist JSON cache files (null disables caching)
  */
-async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToken, onProgress) {
+async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToken, onProgress, cacheDir = null) {
   // Collect all supported image files
   const allFiles = listImageFiles(folderPath)
   const total = allFiles.length
 
   if (total === 0) return []
 
+  // Load existing cache and partition files into cache-hits and to-scan.
+  const { key: cacheKey, entries: cachedMap, createdAt: cacheCreatedAt } =
+    scanCache.load(cacheDir, folderPath, referenceEmbedding)
+
   const candidates = []
+  const toScan = []
+  let confirmedCount = 0
+  let uncertainCount = 0
+  let cachedHits = 0
+  let progressIndex = 0
+
+  for (const filePath of allFiles) {
+    const entry = cachedMap.get(filePath)
+    const validatedResult = scanCache.validateEntry(filePath, entry)
+
+    if (validatedResult) {
+      candidates.push(validatedResult)
+      if (validatedResult.status === 'confirmed') confirmedCount++
+      if (validatedResult.status === 'uncertain') uncertainCount++
+      cachedHits++
+
+      // Emit a lightweight progress event for each cache hit so the UI
+      // shows the fast-skip count advancing.
+      onProgress({
+        index: progressIndex++,
+        total,
+        filename: validatedResult.filename,
+        thumbnailBase64: null,
+        status: 'scanning',
+        cached: true,
+        cachedHits,
+        confirmed: confirmedCount,
+        uncertain: uncertainCount,
+      })
+    } else {
+      toScan.push(filePath)
+    }
+  }
+
+  // Everything was cached — short-circuit the worker pool.
+  if (toScan.length === 0 || cancelToken.cancelled) {
+    candidates.sort((a, b) => b.similarityScore - a.similarityScore)
+    return candidates
+  }
 
   const { Worker } = require('worker_threads')
   const os = require('os')
@@ -36,20 +88,36 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
   return new Promise((resolve, reject) => {
     let currentIndex = 0
     let completed = 0
-    let confirmedCount = 0
-    let uncertainCount = 0
+    let writesSinceFlush = 0
     let settled = false
 
     const numCpus = Math.max(1, os.cpus().length - 1)
-    const maxWorkers = Math.min(numCpus, allFiles.length)
+    const maxWorkers = Math.min(numCpus, toScan.length)
     const workers = []
     const readyTimeouts = new Map()
+
+    // Mutable cache entries — we update this as results come in and
+    // flush to disk periodically.
+    const cacheEntries = new Map(cachedMap)
+
+    const flushCache = () => {
+      if (!cacheDir) return
+      scanCache.save(cacheDir, {
+        key: cacheKey,
+        folderPath,
+        referenceEmbedding,
+        entries: cacheEntries,
+        createdAt: cacheCreatedAt,
+      })
+      writesSinceFlush = 0
+    }
 
     const finish = (reason, err) => {
       if (settled) return
       settled = true
       for (const t of readyTimeouts.values()) clearTimeout(t)
       workers.forEach((w) => { try { w.terminate() } catch (_) {} })
+      flushCache()
       if (reason === 'error') return reject(err)
       candidates.sort((a, b) => b.similarityScore - a.similarityScore)
       resolve(candidates)
@@ -57,28 +125,38 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
 
     const assignTask = (worker) => {
       if (cancelToken.cancelled) { finish('cancelled'); return false }
-      if (currentIndex >= allFiles.length) return false
+      if (currentIndex >= toScan.length) return false
 
       const idx = currentIndex++
-      const filePath = allFiles[idx]
+      const filePath = toScan[idx]
       worker.postMessage({
         filePath,
         filename: path.basename(filePath),
         referenceEmbedding,
-        index: idx
+        index: idx,
       })
       return true
     }
 
     const checkComplete = () => {
-      if (cancelToken.cancelled || completed === allFiles.length) {
+      if (cancelToken.cancelled || completed === toScan.length) {
         finish('done')
       }
     }
 
+    const recordCacheEntry = (filePath, result) => {
+      if (!cacheDir) return
+      try {
+        const stats = fs.statSync(filePath)
+        cacheEntries.set(filePath, { mtimeMs: stats.mtimeMs, result })
+        writesSinceFlush++
+        if (writesSinceFlush >= CACHE_FLUSH_INTERVAL) flushCache()
+      } catch (_) {}
+    }
+
     const startWorker = () => {
       const worker = new Worker(path.join(__dirname, 'scanWorker.js'), {
-        workerData: { modelsPath }
+        workerData: { modelsPath },
       })
 
       const readyTimer = setTimeout(() => {
@@ -98,13 +176,16 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
           candidates.push(msg.result)
           if (msg.result.status === 'confirmed') confirmedCount++
           if (msg.result.status === 'uncertain') uncertainCount++
+          recordCacheEntry(msg.result.filePath, msg.result)
 
           onProgress({
-            index: msg.index,
+            index: progressIndex++,
             total,
             filename: msg.result.filename,
             thumbnailBase64: msg.thumbnailBase64,
             status: 'scanning',
+            cached: false,
+            cachedHits,
             confirmed: confirmedCount,
             uncertain: uncertainCount,
           })
@@ -113,11 +194,13 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
           if (!assignTask(worker)) checkComplete()
         } else if (msg.type === 'skipped') {
           onProgress({
-            index: msg.index,
+            index: progressIndex++,
             total,
             filename: msg.filename,
             thumbnailBase64: msg.thumbnailBase64,
             status: 'scanning',
+            cached: false,
+            cachedHits,
             confirmed: confirmedCount,
             uncertain: uncertainCount,
           })
@@ -131,8 +214,6 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
       })
 
       worker.on('error', (err) => {
-        // A worker crash forfeits the in-flight task. We still advance `completed`
-        // so the scan can terminate rather than hanging on a lost slot.
         console.error('Scan worker crashed:', err)
         completed++
         checkComplete()
@@ -141,7 +222,6 @@ async function scanFolder(folderPath, referenceEmbedding, modelsPath, cancelToke
       workers.push(worker)
     }
 
-    // Start initial workers
     for (let i = 0; i < maxWorkers; i++) {
       startWorker()
     }

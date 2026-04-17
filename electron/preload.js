@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Scanning
   startScan: (params) => ipcRenderer.invoke('face:startScan', params),
   cancelScan: () => ipcRenderer.invoke('face:cancelScan'),
+  clearScanCache: (params) => ipcRenderer.invoke('face:clearScanCache', params),
   onScanProgress: (callback) => {
     const listener = (event, data) => callback(data)
     ipcRenderer.on('scan:progress', listener)

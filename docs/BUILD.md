@@ -109,6 +109,38 @@ This project doesn't ship an auto-updater. Adding one is straightforward:
 
 See [electron-updater docs](https://www.electron.build/auto-update) for details. Auto-updates require signed builds on macOS.
 
+## Faster face detection (optional)
+
+By default the app runs face detection on WASM, which works everywhere but is CPU-only. If you care about speed on large libraries, install one of these native backends and the app will pick it up automatically at startup. The backend chosen is logged at startup (`Face detection models loaded (backend: gpu|node|wasm)`).
+
+### Native CPU (recommended for Mac + fallback elsewhere)
+
+Faster than WASM, works on macOS, Windows, and Linux:
+
+```bash
+npm install --save-optional @tensorflow/tfjs-node
+```
+
+On macOS this is the best option available today — Apple-silicon CPU inference is already very fast, and there's no clean Core ML path for face-api.js. A Core ML bridge is tracked for a future release.
+
+### CUDA GPU (Linux and Windows with NVIDIA hardware)
+
+Requires a working CUDA + cuDNN install. See the [tfjs-node-gpu docs](https://github.com/tensorflow/tfjs/tree/master/tfjs-node) for supported versions.
+
+```bash
+npm install --save-optional @tensorflow/tfjs-node-gpu
+```
+
+### Forcing a specific backend
+
+Useful for testing. Set `FACE_API_BACKEND` to `gpu`, `node`, or `wasm` before launching:
+
+```bash
+FACE_API_BACKEND=wasm npm run dev
+```
+
+The WASM fallback always works even if you try to force a backend that isn't installed.
+
 ## CI builds
 
 The repo's GitHub Actions workflow (`.github/workflows/ci.yml`) runs unit tests on Linux only. To build release installers in CI, add platform-specific jobs that run on `macos-latest` and `windows-latest` with the signing env vars wired up via GitHub Secrets.

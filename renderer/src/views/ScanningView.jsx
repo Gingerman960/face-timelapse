@@ -80,6 +80,7 @@ export default function ScanningView() {
 
   const confirmed = progress?.confirmed ?? 0
   const uncertain = progress?.uncertain ?? 0
+  const cachedHits = progress?.cachedHits ?? 0
 
   return (
     <div className="view-container">
@@ -104,6 +105,12 @@ export default function ScanningView() {
           <div className="counter-num text-warning">{uncertain}</div>
           <div className="counter-label">Uncertain</div>
         </div>
+        {cachedHits > 0 && (
+          <div className="scan-counter">
+            <div className="counter-num text-muted">{cachedHits}</div>
+            <div className="counter-label">From cache</div>
+          </div>
+        )}
         <button className="btn btn-danger ml-auto" onClick={handleCancel}>Cancel</button>
       </div>
 
