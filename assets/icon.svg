@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D0D0F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#111318;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8E8ED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A0A0B0;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background with rounded corners (macOS icon shape) -->
+  <rect width="1024" height="1024" rx="230" ry="230" fill="url(#bg)"/>
+
+  <!-- Subtle inner vignette -->
+  <rect width="1024" height="1024" rx="230" ry="230" fill="none" stroke="#1A1A2A" stroke-width="2"/>
+
+  <!-- === CORNER BRACKETS === -->
+  <!-- Stroke settings: crisp white, rounded caps -->
+  <!-- Top-Left bracket -->
+  <path d="M 242 310 L 242 242 L 310 242" fill="none" stroke="url(#lineGrad)" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <!-- Top-Right bracket -->
+  <path d="M 714 242 L 782 242 L 782 310" fill="none" stroke="url(#lineGrad)" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <!-- Bottom-Left bracket -->
+  <path d="M 242 714 L 242 782 L 310 782" fill="none" stroke="url(#lineGrad)" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <!-- Bottom-Right bracket -->
+  <path d="M 714 782 L 782 782 L 782 714" fill="none" stroke="url(#lineGrad)" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+
+  <!-- === FACE LANDMARKS === -->
+
+  <!-- Left eye — bottom arc only -->
+  <path d="M 376 458 Q 396 482 416 458" fill="none" stroke="url(#lineGrad)" stroke-width="26" stroke-linecap="round"/>
+
+  <!-- Right eye — bottom arc only -->
+  <path d="M 608 458 Q 632 482 652 458" fill="none" stroke="url(#lineGrad)" stroke-width="26" stroke-linecap="round"/>
+
+  <!-- Nose — smaller centered triangle -->
+  <path d="M 512 510 L 490 548 L 534 548" fill="none" stroke="url(#lineGrad)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Mouth — gentle curve -->
+  <path d="M 432 626 Q 512 672 592 626" fill="none" stroke="url(#lineGrad)" stroke-width="26" stroke-linecap="round"/>
+
+  <!-- === SCAN LINE (subtle horizontal) === -->
+  <line x1="290" y1="512" x2="734" y2="512" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.08" stroke-dasharray="6 10"/>
+
+  <!-- Center dot — subtle focal point -->
+  <circle cx="512" cy="512" r="5" fill="#E8E8ED" fill-opacity="0.15"/>
+</svg>

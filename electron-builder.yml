@@ -1,0 +1,34 @@
+appId: io.github.gingerman960.facetimelapse
+productName: FaceTimelapse
+
+files:
+  - dist/renderer/**
+  - electron/**
+  - package.json
+
+extraResources:
+  - from: models/
+    to: models/
+    filter:
+      - "**"
+
+asarUnpack:
+  - node_modules/ffmpeg-static/**
+  - node_modules/canvas/**
+  - node_modules/sharp/**
+  - node_modules/@tensorflow/tfjs-backend-wasm/**
+
+mac:
+  icon: assets/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.photography
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64

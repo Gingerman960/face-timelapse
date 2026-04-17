@@ -1,0 +1,26 @@
+node_modules/
+dist/
+models/
+release/
+
+# Build artifacts
+*.dmg
+*.exe
+*.zip
+*.AppImage
+*.deb
+*.snap
+
+# Environment / editor
+.env
+.env.*
+.idea/
+.vscode/
+*.log
+
+# Test output
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
