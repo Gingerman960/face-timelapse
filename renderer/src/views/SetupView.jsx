@@ -421,6 +421,40 @@ export default function SetupView() {
     }
   }
 
+  // Keyboard nudge: arrow keys shift the crop by 1px (10px with Shift).
+  // Escape cancels an in-progress drag. Mouse-only resize is intentional —
+  // full keyboard crop is out of scope for this pass.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && dragRef.current) {
+        dragRef.current = null
+        setIsDragging(false)
+        setCursor('default')
+        return
+      }
+
+      const box = cropBoxRef.current
+      const ps = previewSizeRef.current
+      if (!box || !ps) return
+      const step = e.shiftKey ? 10 : 1
+      let nx = box.x, ny = box.y
+      if (e.key === 'ArrowLeft') nx -= step
+      else if (e.key === 'ArrowRight') nx += step
+      else if (e.key === 'ArrowUp') ny -= step
+      else if (e.key === 'ArrowDown') ny += step
+      else return
+
+      // Only consume arrow keys if a focusable element *isn't* the active target,
+      // otherwise we'd steal tab-stops from range inputs and buttons.
+      if (document.activeElement && document.activeElement.tagName !== 'BODY') return
+
+      e.preventDefault()
+      setCropBox(clampBox(nx, ny, box.w, box.h, ps.w, ps.h))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const canSetReference = !!referenceImagePath && !loading
   const canStartScan = !!referenceEmbedding && !!sourceFolderPath
   const handles = cropBox ? getHandles(cropBox) : []

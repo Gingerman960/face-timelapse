@@ -7,8 +7,6 @@ import DailySelectionView from './views/DailySelectionView'
 import AligningView from './views/AligningView'
 import ResultsView from './views/ResultsView'
 
-// Styles moved to src/index.css
-
 const STEP_LABELS = {
   setup: '1. Setup',
   scanning: '2. Scan',
@@ -29,7 +27,6 @@ export default function App() {
   const currentStepIdx = STEP_ORDER.indexOf(step)
 
   const handleStepClick = (targetStep, targetIdx) => {
-    // Only allow clicking on completed (earlier) steps that aren't transient
     if (targetIdx >= currentStepIdx) return
     if (NON_NAVIGABLE.has(targetStep)) return
     setStep(targetStep)
@@ -51,7 +48,7 @@ export default function App() {
     <div className="app-container">
       <header className="app-header">
         <span className="app-title">FaceTimelapse</span>
-        <nav className="app-steps">
+        <nav className="app-steps" aria-label="Workflow steps">
           {STEP_ORDER.map((s, i) => {
             const isCompleted = i < currentStepIdx
             const isClickable = isCompleted && !NON_NAVIGABLE.has(s)
@@ -60,14 +57,33 @@ export default function App() {
             if (i === currentStepIdx) stepClass += ' current'
             if (isClickable) stepClass += ' clickable'
 
+            const label = STEP_LABELS[s]
+
+            // Rendered as a button only when clickable, so non-interactive
+            // steps don't announce themselves as buttons to screen readers.
+            if (isClickable) {
+              return (
+                <button
+                  type="button"
+                  key={s}
+                  className={stepClass}
+                  onClick={() => handleStepClick(s, i)}
+                  title={`Go back to ${label}`}
+                  aria-label={`Go back to ${label}`}
+                  aria-current={i === currentStepIdx ? 'step' : undefined}
+                >
+                  {label}
+                </button>
+              )
+            }
+
             return (
               <span
                 key={s}
                 className={stepClass}
-                onClick={() => isClickable && handleStepClick(s, i)}
-                title={isClickable ? `Go back to ${STEP_LABELS[s]}` : ''}
+                aria-current={i === currentStepIdx ? 'step' : undefined}
               >
-                {STEP_LABELS[s]}
+                {label}
               </span>
             )
           })}
@@ -75,9 +91,9 @@ export default function App() {
       </header>
 
       {error && (
-        <div className="error-banner">
+        <div className="error-banner" role="alert">
           <span>{error}</span>
-          <button onClick={clearError}>×</button>
+          <button onClick={clearError} aria-label="Dismiss error">×</button>
         </div>
       )}
 
@@ -87,4 +103,3 @@ export default function App() {
     </div>
   )
 }
-

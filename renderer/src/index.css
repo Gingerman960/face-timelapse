@@ -1302,3 +1302,43 @@ input[type=range]:focus {
     gap: 12px;
     margin-top: 32px;
 }
+
+/* =========================================
+   A11y: button resets for elements that were
+   previously <div onClick> and are now real <button>
+   elements. We strip the user-agent button chrome
+   so visual design stays identical, but keep the
+   focus outline so keyboard users can see where
+   they are.
+   ========================================= */
+button.step-badge,
+button.cal-day,
+button.daily-photo-card,
+button.results-card-btn,
+button.nav-zone {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+button.results-card-btn {
+    /* results-card is a card — preserve its layout */
+    display: block;
+    width: 100%;
+}
+
+/* Visible focus ring on all interactive elements. Previously divs had none. */
+button.step-badge:focus-visible,
+button.cal-day:focus-visible,
+button.daily-photo-card:focus-visible,
+button.results-card-btn:focus-visible,
+button.nav-zone:focus-visible,
+.fullscreen-close:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}

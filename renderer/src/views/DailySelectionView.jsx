@@ -1,7 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import useAlignmentStore, { getSelectedPhotos } from '../store/alignmentStore'
 
-// Styles moved to src/index.css
+// Cap on concurrent getImageBase64 IPC calls. Without this, opening a
+// high-count day fires one IPC call per photo in parallel and stalls
+// both processes.
+const THUMB_LOAD_CONCURRENCY = 4
+
+// Cap thumbnail cache — base64 JPEGs of thousands of photos exhaust renderer memory.
+const THUMB_CACHE_CAP = 300
 
 export default function DailySelectionView() {
   const {
@@ -14,10 +20,28 @@ export default function DailySelectionView() {
   const [thumbCache, setThumbCache] = useState({})
   const [loading, setLoading] = useState(false)
 
+  // Simple in-memory LRU — order of keys matters for eviction.
+  // We re-insert a key on access so it becomes "most recent".
+  const touchCacheOrder = (filePath, b64) => {
+    setThumbCache((c) => {
+      if (c[filePath]) {
+        // Re-insert at end (most-recent)
+        const rest = { ...c }
+        const kept = rest[filePath]
+        delete rest[filePath]
+        return { ...rest, [filePath]: kept }
+      }
+      const next = { ...c, [filePath]: b64 }
+      const keys = Object.keys(next)
+      if (keys.length <= THUMB_CACHE_CAP) return next
+      const trimmed = {}
+      for (const k of keys.slice(keys.length - THUMB_CACHE_CAP)) trimmed[k] = next[k]
+      return trimmed
+    })
+  }
+
   // Auto-select single-photo days on mount
   useEffect(() => {
-    // Single-photo days are already selected (selectedIndex: 0 from groupByDay)
-    // Find first multi-photo day to highlight, or stay null if all single
     const firstMulti = dailyGroups.findIndex((g) => g.photos.length > 1)
     if (firstMulti >= 0) setActiveGroupIdx(firstMulti)
     else if (dailyGroups.length > 0) setActiveGroupIdx(0)
@@ -25,14 +49,12 @@ export default function DailySelectionView() {
 
   const activeGroup = activeGroupIdx !== null ? dailyGroups[activeGroupIdx] : null
 
-  // Build date→groupIndex lookup
   const dateToGroup = useMemo(() => {
     const map = {}
     dailyGroups.forEach((g, i) => { map[g.date] = i })
     return map
   }, [dailyGroups])
 
-  // Build calendar months from the date range
   const calendarMonths = useMemo(() => {
     if (dailyGroups.length === 0) return []
     const dates = dailyGroups.map((g) => g.date).sort()
@@ -53,35 +75,41 @@ export default function DailySelectionView() {
     return months
   }, [dailyGroups])
 
-  // Cap thumbnail cache — base64 JPEGs of thousands of photos exhaust renderer memory.
-  const THUMB_CACHE_CAP = 300
+  const selectedPhotos = useMemo(() => getSelectedPhotos(dailyGroups), [dailyGroups])
+  const totalSelected = selectedPhotos.length
 
-  const loadThumb = async (filePath) => {
-    if (thumbCache[filePath]) return
-    const b64 = await window.electronAPI.getImageBase64(filePath)
-    setThumbCache((c) => {
-      const next = { ...c, [filePath]: b64 }
-      const keys = Object.keys(next)
-      if (keys.length <= THUMB_CACHE_CAP) return next
-      const trimmed = {}
-      for (const k of keys.slice(keys.length - THUMB_CACHE_CAP)) trimmed[k] = next[k]
-      return trimmed
-    })
-  }
+  // Load thumbnails for the active group with a concurrency cap.
+  // Ref so StrictMode double-mount doesn't race the queue against itself.
+  const loadQueueRef = useRef({ active: 0, pending: [] })
 
   useEffect(() => {
     if (!activeGroup) return
-    for (const photo of activeGroup.photos) {
-      loadThumb(photo.filePath)
+    const q = loadQueueRef.current
+
+    const pump = () => {
+      while (q.active < THUMB_LOAD_CONCURRENCY && q.pending.length > 0) {
+        const filePath = q.pending.shift()
+        q.active++
+        window.electronAPI
+          .getImageBase64(filePath)
+          .then((b64) => { touchCacheOrder(filePath, b64) })
+          .catch(() => {})
+          .finally(() => { q.active--; pump() })
+      }
     }
+
+    for (const photo of activeGroup.photos) {
+      if (thumbCache[photo.filePath]) continue
+      // Avoid double-queueing
+      if (!q.pending.includes(photo.filePath)) q.pending.push(photo.filePath)
+    }
+    pump()
   }, [activeGroupIdx, activeGroup])
 
-  // Handle clicking an empty day to upload a photo
   const handleUploadForDay = async (dateKey) => {
     const filePath = await window.electronAPI.chooseFile()
     if (!filePath) return
 
-    // Create a new daily group for this date
     const newGroup = {
       date: dateKey,
       photos: [{
@@ -98,14 +126,12 @@ export default function DailySelectionView() {
     const updated = [...dailyGroups, newGroup].sort((a, b) => a.date.localeCompare(b.date))
     setDailyGroups(updated)
 
-    // Find and activate the new group
     const newIdx = updated.findIndex((g) => g.date === dateKey)
     setActiveGroupIdx(newIdx)
   }
 
   const handleAlign = async () => {
-    const selected = getSelectedPhotos(dailyGroups)
-    if (selected.length === 0) {
+    if (selectedPhotos.length === 0) {
       setError('No photos selected')
       return
     }
@@ -119,7 +145,7 @@ export default function DailySelectionView() {
 
     try {
       const results = await window.electronAPI.alignBatch({
-        candidates: selected,
+        candidates: selectedPhotos,
         referenceAlignmentPoints,
         referenceImageSize,
         outputSize: referenceOutputSize,
@@ -136,7 +162,6 @@ export default function DailySelectionView() {
     }
   }
 
-  const totalSelected = getSelectedPhotos(dailyGroups).length
   const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
   return (
@@ -156,17 +181,15 @@ export default function DailySelectionView() {
             return (
               <div key={`${year}-${month}`} className="cal-month">
                 <div className="cal-month-header">{monthStr}</div>
-                <div className="cal-week-row">
+                <div className="cal-week-row" role="row">
                   {DAY_NAMES.map((d) => (
-                    <div key={d} className="cal-day-header">{d}</div>
+                    <div key={d} className="cal-day-header" role="columnheader">{d}</div>
                   ))}
                 </div>
-                <div className="cal-week-row">
-                  {/* Empty cells before first day */}
+                <div className="cal-week-row" role="row">
                   {Array.from({ length: firstDay }, (_, i) => (
-                    <div key={`e${i}`} className="cal-day empty" />
+                    <div key={`e${i}`} className="cal-day empty" aria-hidden="true" />
                   ))}
-                  {/* Day cells */}
                   {Array.from({ length: daysInMonth }, (_, i) => {
                     const day = i + 1
                     const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -180,18 +203,24 @@ export default function DailySelectionView() {
                     if (hasPhoto) dayClass += isMulti ? ' has-multi' : ' has-single'
                     if (isActive) dayClass += ' active'
 
+                    const label = hasPhoto
+                      ? `${monthStr} ${day} — ${group.photos.length} photo${group.photos.length > 1 ? 's' : ''}`
+                      : `${monthStr} ${day} — no photo, click to add`
+
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={day}
                         className={dayClass}
                         onClick={() => {
                           if (hasPhoto) setActiveGroupIdx(groupIdx)
                           else handleUploadForDay(dateKey)
                         }}
-                        title={hasPhoto ? `${group.photos.length} photo${group.photos.length > 1 ? 's' : ''}` : 'Click to add photo'}
+                        aria-label={label}
+                        aria-pressed={isActive}
                       >
                         {day}
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -210,32 +239,34 @@ export default function DailySelectionView() {
                   ? <span className="text-muted font-normal"> — Auto-selected</span>
                   : <span className="text-muted font-normal"> — Pick one ({activeGroup.photos.length} photos)</span>}
               </div>
-              <div className="photo-grid">
+              <div className="photo-grid" role="radiogroup" aria-label="Photos for selected day">
                 {activeGroup.photos.map((photo, pi) => {
                   const thumb = thumbCache[photo.filePath]
                   const isSelected = pi === activeGroup.selectedIndex
+                  const pct = Math.round(photo.similarityScore * 100)
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={photo.filePath}
                       className={`daily-photo-card ${isSelected ? 'selected' : ''}`}
                       onClick={() => setDailyGroupSelection(activeGroupIdx, pi)}
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={`${photo.filename}, ${pct}% similarity${isSelected ? ', selected' : ''}`}
                     >
                       {thumb ? (
                         <img src={`data:image/jpeg;base64,${thumb}`} className="daily-photo-img" alt="" />
                       ) : (
-                        <div className="daily-photo-img placeholder" />
+                        <div className="daily-photo-img placeholder" aria-hidden="true" />
                       )}
 
                       {isSelected && <div className="badge-selected">Selected</div>}
 
-                      <div className="badge-score">
-                        {Math.round(photo.similarityScore * 100)}%
-                      </div>
-                    </div>
+                      <div className="badge-score">{pct}%</div>
+                    </button>
                   )
                 })}
               </div>
-              {/* Selected filename */}
               {activeGroup.photos[activeGroup.selectedIndex] && (
                 <div className="daily-filename">
                   Selected: {activeGroup.photos[activeGroup.selectedIndex].filename}

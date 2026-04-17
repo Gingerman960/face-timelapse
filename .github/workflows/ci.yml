@@ -12,18 +12,20 @@ concurrency:
 
 jobs:
   test:
-    name: Unit tests (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+    name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node: ['18', '20']
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system deps for node-canvas
+      - name: Install system deps for node-canvas (Linux)
+        if: runner.os == 'Linux'
         # Even though the unit tests don't load canvas, npm install rebuilds
-        # it against the runtime; missing headers here produce noisy warnings.
+        # it against the runtime; missing headers produce noisy warnings.
         run: |
           sudo apt-get update
           sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
@@ -36,8 +38,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
         env:
-          # Skip the electron-rebuild step in CI — we're not launching Electron,
-          # we're just running pure-JS unit tests.
+          # Skip the Electron binary download — we're only running pure-JS
+          # unit tests, not launching the desktop app.
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 
       - name: Run tests

@@ -1,49 +1,107 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react'
 import useAlignmentStore from '../store/alignmentStore'
 import VideoExportModal from '../components/VideoExportModal'
 
-// Styles moved to src/index.css
+// ────────────────────────────────────────────────────────────────────
+// Shared IntersectionObserver — one instance for the whole grid instead
+// of N-per-thumbnail. Each LazyThumbnail registers an element and a
+// callback; the observer dispatches to callbacks only when the element
+// intersects the viewport (+200px margin).
+// ────────────────────────────────────────────────────────────────────
+const ObserverContext = createContext(null)
+
+function createSharedObserver() {
+  const callbacks = new WeakMap()
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const cb = callbacks.get(entry.target)
+        if (cb) {
+          cb()
+          // One-shot: once visible, stop watching this element.
+          observer.unobserve(entry.target)
+          callbacks.delete(entry.target)
+        }
+      }
+    },
+    { rootMargin: '200px' }
+  )
+
+  return {
+    observe(el, cb) {
+      if (!el || !cb) return
+      callbacks.set(el, cb)
+      observer.observe(el)
+    },
+    unobserve(el) {
+      if (!el) return
+      callbacks.delete(el)
+      observer.unobserve(el)
+    },
+    disconnect() {
+      observer.disconnect()
+    },
+  }
+}
 
 const LazyThumbnail = ({ outputPath, dateStr, index, onClick }) => {
   const [b64, setB64] = useState(null)
-  const imgRef = useRef(null)
+  const hostRef = useRef(null)
+  const observerApi = useContext(ObserverContext)
 
   useEffect(() => {
-    if (!outputPath) return
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        window.electronAPI.getImageBase64(outputPath).then((data) => {
-          setB64(data)
-        })
-        observer.disconnect()
-      }
-    }, { rootMargin: '200px' })
+    if (!outputPath || !hostRef.current || !observerApi) return
+    const el = hostRef.current
+    let cancelled = false
 
-    if (imgRef.current) observer.observe(imgRef.current)
+    observerApi.observe(el, () => {
+      window.electronAPI.getImageBase64(outputPath).then((data) => {
+        if (!cancelled) setB64(data)
+      })
+    })
 
-    return () => observer.disconnect()
-  }, [outputPath])
+    return () => {
+      cancelled = true
+      observerApi.unobserve(el)
+    }
+  }, [outputPath, observerApi])
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClick(index)
+    }
+  }
 
   return (
-    <div className="results-card" ref={imgRef} onClick={() => onClick(index)} style={{ cursor: 'pointer' }}>
+    <button
+      type="button"
+      className="results-card results-card-btn"
+      ref={hostRef}
+      onClick={() => onClick(index)}
+      onKeyDown={handleKey}
+      aria-label={dateStr ? `View photo from ${dateStr}` : `View photo ${index + 1}`}
+    >
       {b64 ? (
         <img src={`data:image/jpeg;base64,${b64}`} className="results-img" alt="" />
       ) : (
         <div className="results-img placeholder">Loading</div>
       )}
       <div className="date-badge">{dateStr}</div>
-    </div>
+    </button>
   )
 }
 
 const FullscreenViewer = ({ items, initialIndex, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [b64, setB64] = useState(null)
+  const closeBtnRef = useRef(null)
 
   useEffect(() => {
     const item = items[currentIndex]
     if (!item || !item.outputPath) return
-    setB64(null) // Clear immediately when switching
+    setB64(null)
     window.electronAPI.getImageBase64(item.outputPath).then((data) => {
       setB64(data)
     })
@@ -56,6 +114,10 @@ const FullscreenViewer = ({ items, initialIndex, onClose }) => {
       if (e.key === 'ArrowLeft') setCurrentIndex((prev) => Math.max(0, prev - 1))
     }
     window.addEventListener('keydown', handleKeyDown)
+    // Move focus to the close button so screen readers and keyboard users
+    // land inside the dialog. Previously focus stayed on the thumbnail
+    // button behind the overlay.
+    closeBtnRef.current?.focus()
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [items.length, onClose])
 
@@ -63,7 +125,13 @@ const FullscreenViewer = ({ items, initialIndex, onClose }) => {
   const dateStr = currentItem?.creationDate ? new Date(currentItem.creationDate).toLocaleString() : ''
 
   return (
-    <div className="fullscreen-overlay" onClick={onClose}>
+    <div
+      className="fullscreen-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Photo viewer"
+    >
       <div className="fullscreen-content" onClick={(e) => e.stopPropagation()}>
         {b64 ? (
           <img src={`data:image/jpeg;base64,${b64}`} className="fullscreen-img" alt="" />
@@ -74,18 +142,35 @@ const FullscreenViewer = ({ items, initialIndex, onClose }) => {
         <div className="fullscreen-topbar">
           <span>{currentIndex + 1} / {items.length}</span>
           <span>{dateStr}</span>
-          <button className="fullscreen-close" onClick={onClose}>×</button>
+          <button
+            ref={closeBtnRef}
+            className="fullscreen-close"
+            onClick={onClose}
+            aria-label="Close viewer"
+          >
+            ×
+          </button>
         </div>
 
         {currentIndex > 0 && (
-          <div className="nav-zone nav-left" onClick={() => setCurrentIndex(currentIndex - 1)}>
-            <span className="nav-arrow">‹</span>
-          </div>
+          <button
+            type="button"
+            className="nav-zone nav-left"
+            onClick={() => setCurrentIndex(currentIndex - 1)}
+            aria-label="Previous photo"
+          >
+            <span className="nav-arrow" aria-hidden="true">‹</span>
+          </button>
         )}
         {currentIndex < items.length - 1 && (
-          <div className="nav-zone nav-right" onClick={() => setCurrentIndex(currentIndex + 1)}>
-            <span className="nav-arrow">›</span>
-          </div>
+          <button
+            type="button"
+            className="nav-zone nav-right"
+            onClick={() => setCurrentIndex(currentIndex + 1)}
+            aria-label="Next photo"
+          >
+            <span className="nav-arrow" aria-hidden="true">›</span>
+          </button>
         )}
       </div>
     </div>
@@ -94,13 +179,19 @@ const FullscreenViewer = ({ items, initialIndex, onClose }) => {
 
 export default function ResultsView() {
   const {
-    alignedResults, setStep, setError, setVideoProgress,
+    alignedResults, setStep, setError,
   } = useAlignmentStore()
 
   const [exportProgress, setExportProgressLocal] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [viewerIndex, setViewerIndex] = useState(null)
+
+  // One shared observer per ResultsView mount — re-created only if the view
+  // remounts. All LazyThumbnail children consume it via context.
+  const observerRef = useRef(null)
+  if (!observerRef.current) observerRef.current = createSharedObserver()
+  useEffect(() => () => observerRef.current?.disconnect(), [])
 
   const handleExportFolder = async () => {
     const folder = await window.electronAPI.chooseFolder()
@@ -135,63 +226,65 @@ export default function ResultsView() {
     : 0
 
   return (
-    <div className="view-container flex-col p-0">
-      <div className="results-gallery">
-        <div className="title">{alignedResults.length} Aligned Photos</div>
+    <ObserverContext.Provider value={observerRef.current}>
+      <div className="view-container flex-col p-0">
+        <div className="results-gallery">
+          <div className="title">{alignedResults.length} Aligned Photos</div>
 
-        {exportProgress && (
-          <div className="m-b-16">
-            <div className="export-msg">Exporting… {exportProgress.filename}</div>
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${pct}%` }} />
+          {exportProgress && (
+            <div className="m-b-16">
+              <div className="export-msg">Exporting… {exportProgress.filename}</div>
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${pct}%` }} />
+              </div>
             </div>
+          )}
+
+          <div className="results-grid">
+            {alignedResults.map((r, i) => {
+              const dateStr = r.creationDate ? new Date(r.creationDate).toLocaleDateString() : ''
+              return (
+                <LazyThumbnail
+                  key={r.outputPath || i}
+                  outputPath={r.outputPath}
+                  dateStr={dateStr}
+                  index={i}
+                  onClick={setViewerIndex}
+                />
+              )
+            })}
           </div>
-        )}
-
-        <div className="results-grid">
-          {alignedResults.map((r, i) => {
-            const dateStr = r.creationDate ? new Date(r.creationDate).toLocaleDateString() : ''
-            return (
-              <LazyThumbnail
-                key={r.outputPath || i}
-                outputPath={r.outputPath}
-                dateStr={dateStr}
-                index={i}
-                onClick={setViewerIndex}
-              />
-            )
-          })}
         </div>
+
+        <div className="results-footer">
+          <button className="btn btn-secondary" onClick={handleBack}>Back</button>
+          <button
+            className="btn btn-secondary"
+            onClick={handleExportFolder}
+            disabled={exporting || alignedResults.length === 0}
+          >
+            {exporting ? 'Exporting…' : 'Save to Folder'}
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleCreateVideo}
+            disabled={alignedResults.length < 2}
+          >
+            Create Video
+          </button>
+          <div className="results-info">{alignedResults.length} photos</div>
+        </div>
+
+        {showVideoModal && <VideoExportModal onClose={() => setShowVideoModal(false)} />}
+
+        {viewerIndex !== null && (
+          <FullscreenViewer
+            items={alignedResults}
+            initialIndex={viewerIndex}
+            onClose={() => setViewerIndex(null)}
+          />
+        )}
       </div>
-
-      <div className="results-footer">
-        <button className="btn btn-secondary" onClick={handleBack}>Back</button>
-        <button
-          className="btn btn-secondary"
-          onClick={handleExportFolder}
-          disabled={exporting || alignedResults.length === 0}
-        >
-          {exporting ? 'Exporting…' : 'Save to Folder'}
-        </button>
-        <button
-          className="btn btn-primary"
-          onClick={handleCreateVideo}
-          disabled={alignedResults.length < 2}
-        >
-          Create Video
-        </button>
-        <div className="results-info">{alignedResults.length} photos</div>
-      </div>
-
-      {showVideoModal && <VideoExportModal onClose={() => setShowVideoModal(false)} />}
-
-      {viewerIndex !== null && (
-        <FullscreenViewer
-          items={alignedResults}
-          initialIndex={viewerIndex}
-          onClose={() => setViewerIndex(null)}
-        />
-      )}
-    </div>
+    </ObserverContext.Provider>
   )
 }
