@@ -1,8 +1,9 @@
 'use strict'
 
-// `canvas` is a native module built against Electron's V8 headers. Requiring it
-// here at module scope would break plain-Node consumers (e.g. the test runner)
-// that only need the pure-math helpers below. Defer the require to alignImage().
+// @napi-rs/canvas is used for raster work. Require is deferred to the
+// bottom of the file so the pure-math helpers (computeProcrustesTransform,
+// scalePoints) can be imported by the unit-test runner without loading
+// the native binding.
 
 /**
  * Compute Procrustes transform from srcPoints → refPoints.
@@ -88,7 +89,7 @@ function computeProcrustesTransform(srcPoints, refPoints) {
  * where canvas {a,b,c,d,e(=tx),f(=ty)} = swift {a,b,c,d,tx,ty}.
  */
 async function alignImage(sourceBuffer, srcPoints, refPoints, outputSize) {
-  const { createCanvas, loadImage } = require('canvas')
+  const { createCanvas, loadImage } = require('@napi-rs/canvas')
   const { a, b, c, d, tx, ty } = computeProcrustesTransform(srcPoints, refPoints)
 
   const canvas = createCanvas(outputSize.w, outputSize.h)

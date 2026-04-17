@@ -5,10 +5,10 @@ This document covers building installers for macOS, Windows, and Linux, plus the
 ## Prerequisites
 
 - Node.js 18+
-- Platform build tools for the native deps (`canvas`, `sharp`):
+- Platform build tools for `sharp` (the only remaining native dep; `@napi-rs/canvas` ships prebuilt):
   - **macOS:** `xcode-select --install`
   - **Windows:** [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with the "Desktop development with C++" workload
-  - **Linux:** `sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev`
+  - **Linux:** `sudo apt-get install build-essential`
 
 Then:
 

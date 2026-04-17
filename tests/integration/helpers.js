@@ -13,7 +13,7 @@ const SUPPORTED = new Set(['.jpg', '.jpeg', '.png', '.webp'])
 const SKIP_ENV_MISSING = 'FACETIMELAPSE_INTEGRATION_PHOTOS is not set'
 const SKIP_ENV_EMPTY = 'integration photo directory contains no supported images'
 const SKIP_MODELS_MISSING = 'models/ directory missing — run `npm run download-models`'
-const SKIP_CANVAS_ABI = 'canvas native binding is wrong ABI — run `npm rebuild canvas --update-binary`'
+const SKIP_CANVAS_ABI = '@napi-rs/canvas failed to load — run `npm install` to fetch prebuilt binaries'
 
 /**
  * Decide whether integration tests should run, and if not, why.
@@ -48,9 +48,9 @@ function integrationStatus() {
   }
 
   // Try loading the canvas binding now — defer the failure into skip rather than
-  // letting it blow up inside beforeAll with a cryptic NODE_MODULE_VERSION error.
+  // letting it blow up inside beforeAll with a cryptic load error.
   try {
-    require('canvas')
+    require('@napi-rs/canvas')
   } catch (err) {
     return { run: false, skipReason: `${SKIP_CANVAS_ABI} (${err.code || err.message})`, photosDir, modelsPath, images }
   }

@@ -11,6 +11,8 @@ initFaceDetection(workerData.modelsPath).then(() => {
     parentPort.postMessage({ type: 'error', error: err.message })
 })
 
+const DEBUG = !!process.env.FACE_TIMELAPSE_DEBUG
+
 parentPort.on('message', async (task) => {
     const { filePath, filename, referenceEmbedding, index } = task
 
@@ -20,13 +22,16 @@ parentPort.on('message', async (task) => {
         try {
             const thumbBuf = await sharp(filePath).rotate().resize(100, 100, { fit: 'cover' }).jpeg({ quality: 60 }).toBuffer()
             thumbnailBase64 = thumbBuf.toString('base64')
-        } catch (_) { }
+        } catch (err) {
+            if (DEBUG) console.error(`[scan] ${filename}: thumbnail failed — ${err.message}`)
+        }
 
         // Scan buffer
         let scanBuffer
         try {
             scanBuffer = await sharp(filePath).rotate().resize(400, 400, { fit: 'inside' }).jpeg({ quality: 85 }).toBuffer()
         } catch (err) {
+            if (DEBUG) console.error(`[scan] ${filename}: sharp resize failed — ${err.message}`)
             parentPort.postMessage({ type: 'skipped', index, filename, thumbnailBase64 })
             return
         }
@@ -34,9 +39,12 @@ parentPort.on('message', async (task) => {
         let detection
         try {
             detection = await detectFaceFromBuffer(scanBuffer)
-        } catch (_) { }
+        } catch (err) {
+            if (DEBUG) console.error(`[scan] ${filename}: detection threw — ${err.message}`)
+        }
 
         if (!detection) {
+            if (DEBUG) console.error(`[scan] ${filename}: no face detected`)
             parentPort.postMessage({ type: 'skipped', index, filename, thumbnailBase64 })
             return
         }
@@ -44,6 +52,8 @@ parentPort.on('message', async (task) => {
         const embedding = generateEmbedding(detection.landmarks68)
         const score = compareFaces(referenceEmbedding, embedding)
         const status = categorize(score)
+
+        if (DEBUG) console.error(`[scan] ${filename}: score=${score.toFixed(3)} → ${status}`)
 
         if (status === 'rejected') {
             parentPort.postMessage({ type: 'skipped', index, filename, thumbnailBase64 })

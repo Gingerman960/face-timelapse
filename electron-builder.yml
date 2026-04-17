@@ -14,7 +14,7 @@ extraResources:
 
 asarUnpack:
   - node_modules/ffmpeg-static/**
-  - node_modules/canvas/**
+  - node_modules/@napi-rs/canvas*/**
   - node_modules/sharp/**
   - node_modules/@tensorflow/tfjs-backend-wasm/**
 

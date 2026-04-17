@@ -27,11 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system deps for node-canvas (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+      # No system canvas deps — @napi-rs/canvas ships prebuilt binaries.
 
       - uses: actions/setup-node@v4
         with:

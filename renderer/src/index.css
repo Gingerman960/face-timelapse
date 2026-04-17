@@ -335,6 +335,7 @@ input[type=range]:focus {
 .step-badge {
     font-size: 14px;
     font-weight: 500;
+    line-height: 1;
     padding: 8px 16px;
     border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.05);
@@ -342,6 +343,7 @@ input[type=range]:focus {
     border: 1px solid transparent;
     transition: all var(--transition-fast);
     cursor: default;
+    display: inline-block;
 }
 
 .step-badge.active {
@@ -1326,7 +1328,26 @@ input[type=range]:focus {
    focus outline so keyboard users can see where
    they are.
    ========================================= */
-button.step-badge,
+
+/* Step-badge buttons inherit .step-badge's own background + border so
+   clickable completed steps look identical to the span-based
+   not-yet-navigable ones. Padding and line-height are re-stated
+   because user-agent button styling otherwise adds a few extra px
+   and makes the button-based badges visibly taller/wider. */
+button.step-badge {
+    appearance: none;
+    font: inherit;
+    line-height: 1;
+    color: inherit;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-width: 1px;
+    border-style: solid;
+    box-sizing: border-box;
+}
+
+/* Calendar, photo cards, nav arrows were <div onClick> with no chrome —
+   strip all default button styling since these elements are bare wrappers. */
 button.cal-day,
 button.daily-photo-card,
 button.results-card-btn,

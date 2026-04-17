@@ -1,6 +1,25 @@
 'use strict'
 
-const { createCanvas, loadImage, Image, ImageData, Canvas } = require('canvas')
+// @napi-rs/canvas is a Rust/skia-backed canvas implementation. Prebuilt
+// binaries ship for every platform we target (including Apple Silicon),
+// so no electron-rebuild dance is needed, and it doesn't bundle its own
+// copy of glib — which used to collide with sharp's libvips in the same
+// process and caused sporadic worker crashes.
+const napiCanvas = require('@napi-rs/canvas')
+const { createCanvas, loadImage, Image, ImageData } = napiCanvas
+
+// face-api occasionally does `new Canvas()` with no arguments. node-canvas
+// defaulted to 300×150 (the HTML spec); @napi-rs/canvas throws because it
+// can't coerce `undefined` to i32. Wrap it so defaults kick in.
+class Canvas {
+  constructor(width = 300, height = 150) {
+    return napiCanvas.createCanvas(width | 0, height | 0)
+  }
+  static [Symbol.hasInstance](instance) {
+    return napiCanvas.Canvas[Symbol.hasInstance](instance)
+  }
+}
+
 const { loadFaceApiBackend } = require('./faceApiBackend')
 
 // Resolved on first call to initFaceDetection(). Each worker thread and

@@ -36,12 +36,7 @@ FACETIMELAPSE_INTEGRATION_PHOTOS=/path/to/photos/of/one/person npm test
 Requirements:
 1. `npm run download-models` has been run (so `./models/` is populated).
 2. The directory at `FACETIMELAPSE_INTEGRATION_PHOTOS` contains ≥2 photos of the same person.
-3. The `canvas` native binding is built for your Node runtime, not Electron's. Because `postinstall` rebuilds canvas for Electron, running integration tests locally requires a one-time rebuild back to Node ABI:
-   ```bash
-   npm rebuild canvas --update-binary
-   # run integration tests
-   npm run postinstall   # rebuild canvas back to Electron ABI for the desktop app
-   ```
+3. `@napi-rs/canvas` ships prebuilt binaries for every supported platform — no rebuild step needed.
 
 The test photos never enter git — they stay local. Do not commit them.
 

@@ -240,7 +240,11 @@ function listImageFiles(dir) {
       const fullPath = path.join(dir, entry.name)
       if (entry.isDirectory()) {
         results.push(...listImageFiles(fullPath))
-      } else if (entry.isFile()) {
+      } else if (entry.isFile() || entry.isSymbolicLink()) {
+        // Accept symlinks as well as regular files — users may organize
+        // photo libraries with symlinks, and the screenshot capture
+        // script uses symlinks into a temp subset. Broken symlinks are
+        // caught downstream when sharp() throws on read.
         const ext = path.extname(entry.name).toLowerCase()
         if (SUPPORTED_EXTENSIONS.has(ext)) {
           results.push(fullPath)
