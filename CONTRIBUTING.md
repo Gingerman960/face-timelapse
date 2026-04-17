@@ -16,12 +16,34 @@ First-time `npm install` runs `electron-rebuild` for `canvas` and `sharp`. If th
 
 ## Running tests
 
+### Unit tests (pure logic, fast)
+
 ```bash
 npm test           # one-shot
 npm run test:watch # watch mode
 ```
 
-Tests cover pure-logic modules (`alignment`, `faceEmbedding`, `exportService`). Modules that depend on native bindings or model weights (face detection, workers, video export) are not unit-tested yet — integration tests are welcome.
+Covers `alignment`, `faceEmbedding`, `exportService` — 23 tests, no native deps.
+
+### Integration tests (real face-api pipeline)
+
+Gated by an environment variable so they skip cleanly when prerequisites aren't met:
+
+```bash
+FACETIMELAPSE_INTEGRATION_PHOTOS=/path/to/photos/of/one/person npm test
+```
+
+Requirements:
+1. `npm run download-models` has been run (so `./models/` is populated).
+2. The directory at `FACETIMELAPSE_INTEGRATION_PHOTOS` contains ≥2 photos of the same person.
+3. The `canvas` native binding is built for your Node runtime, not Electron's. Because `postinstall` rebuilds canvas for Electron, running integration tests locally requires a one-time rebuild back to Node ABI:
+   ```bash
+   npm rebuild canvas --update-binary
+   # run integration tests
+   npm run postinstall   # rebuild canvas back to Electron ABI for the desktop app
+   ```
+
+The test photos never enter git — they stay local. Do not commit them.
 
 ## Making a change
 

@@ -1,5 +1,8 @@
 # face-timelapse
 
+[![CI](https://github.com/Gingerman960/face-timelapse/actions/workflows/ci.yml/badge.svg)](https://github.com/Gingerman960/face-timelapse/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 A cross-platform desktop app that aligns a face across many photos and exports the result as a smooth timelapse video. Built with Electron + React + face-api.js.
 
 > Pick a reference photo, point it at a folder of photos, and the app finds every photo of that person, aligns their face to the reference position, and strings the result into an MP4.
@@ -53,7 +56,7 @@ npm run build:mac     # macOS DMG (x64 + arm64)
 npm run build:win     # Windows NSIS installer (x64)
 ```
 
-Output lands in `release/`. macOS builds are unsigned — sign them yourself before distribution.
+Output lands in `release/`. Builds are unsigned by default — see [docs/BUILD.md](./docs/BUILD.md) for Apple Developer ID notarization, Windows Authenticode, and distribution notes.
 
 ## How alignment works
 
