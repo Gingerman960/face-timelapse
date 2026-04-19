@@ -26,6 +26,12 @@ A cross-platform desktop app that aligns a face across many photos and exports t
 | **Daily selection** — one photo per day | **Results** — aligned timelapse |
 | ![Daily selection](./assets/screenshots/daily-selection.png) | ![Results](./assets/screenshots/results.png) |
 
+### Video export
+
+![Video export modal](./assets/screenshots/video-export.png)
+
+From the Results view, **Create Video** opens a modal that turns the aligned stack into an MP4. Two sliders drive the encode — **FPS** (1–60) and **Total Duration** (1–120s) — and each one recomputes the other from the photo count, so you can dial in either "10 FPS, whatever length" or "a 30-second video, whatever framerate". A progress bar updates live while `ffmpeg` encodes, and Cancel stays disabled during the run to prevent half-written output files.
+
 _See [`assets/screenshots/README.md`](./assets/screenshots/README.md) for how to capture + add these._
 
 ## Install
