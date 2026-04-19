@@ -1,6 +1,6 @@
 {
   "name": "face-timelapse",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Cross-platform desktop app that aligns a face across many photos to produce a smooth timelapse video",
   "main": "electron/main.js",
   "author": "Artem Kichihin",

@@ -2,11 +2,33 @@ import React, { useState, useEffect, useRef, createContext, useContext } from 'r
 import useAlignmentStore from '../store/alignmentStore'
 import VideoExportModal from '../components/VideoExportModal'
 
+// Thumbnail grid cells are ~160px CSS, 2x DPR ≈ 320 — 400px leaves headroom.
+const GRID_THUMB_MAX_DIM = 400
+
+// Cap on decoded thumbnails resident in renderer memory at once. Above
+// this, the oldest still-onscreen-or-offscreen thumbnails get evicted
+// back to placeholders. Prevents OOM on huge result sets (3k+ photos).
+const GRID_THUMB_RESIDENT_CAP = 250
+
+// Cap on concurrent getImageBase64 IPC calls fired from the grid.
+// Without this, fast-scrolling past 3000+ thumbnails queues up thousands of
+// parallel image decodes in the main process (each holding a full bitmap
+// during canvas re-encode), which crashes the renderer as the in-flight
+// base64 responses pile up.
+const GRID_THUMB_LOAD_CONCURRENCY = 6
+
+// Long-edge cap for the fullscreen viewer. The IMG is constrained to
+// 90vw/90vh — even on a 4K retina display that's ≲ 2200 physical px.
+// Loading the raw aligned PNG (commonly 3000×3000+) wastes ~10MB per
+// data URL and ~36MB per decoded bitmap that Chromium retains in its
+// image cache, accumulating across navigations until the renderer OOMs.
+const VIEWER_MAX_DIM = 2400
+
 // ────────────────────────────────────────────────────────────────────
 // Shared IntersectionObserver — one instance for the whole grid instead
 // of N-per-thumbnail. Each LazyThumbnail registers an element and a
-// callback; the observer dispatches to callbacks only when the element
-// intersects the viewport (+200px margin).
+// callback for load and for eviction; the observer dispatches when the
+// element enters or leaves the viewport (+200px margin).
 // ────────────────────────────────────────────────────────────────────
 const ObserverContext = createContext(null)
 
@@ -15,23 +37,19 @@ function createSharedObserver() {
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
-        if (!entry.isIntersecting) continue
-        const cb = callbacks.get(entry.target)
-        if (cb) {
-          cb()
-          // One-shot: once visible, stop watching this element.
-          observer.unobserve(entry.target)
-          callbacks.delete(entry.target)
-        }
+        const handlers = callbacks.get(entry.target)
+        if (!handlers) continue
+        if (entry.isIntersecting) handlers.onEnter?.()
+        else handlers.onLeave?.()
       }
     },
     { rootMargin: '200px' }
   )
 
   return {
-    observe(el, cb) {
-      if (!el || !cb) return
-      callbacks.set(el, cb)
+    observe(el, onEnter, onLeave) {
+      if (!el) return
+      callbacks.set(el, { onEnter, onLeave })
       observer.observe(el)
     },
     unobserve(el) {
@@ -45,27 +63,128 @@ function createSharedObserver() {
   }
 }
 
+// Global LRU of currently-resident thumbnails. Each entry is an evict
+// callback that clears the thumbnail's React state and returns true on
+// success, false if the thumbnail is still on-screen and should stay
+// resident. Entries that refused to evict get moved to the MRU end so
+// they remain tracked and don't silently fall out of the cap accounting.
+function createThumbLRU(cap) {
+  const order = new Map() // insertion order = LRU order
+  return {
+    add(key, evictFn) {
+      if (order.has(key)) order.delete(key)
+      order.set(key, evictFn)
+      if (order.size <= cap) return
+      // Snapshot keys so we can mutate `order` while iterating.
+      const keys = Array.from(order.keys())
+      const refused = []
+      for (const k of keys) {
+        if (order.size <= cap) break
+        const fn = order.get(k)
+        order.delete(k)
+        const evicted = fn?.()
+        if (evicted === false) refused.push([k, fn])
+      }
+      // Re-insert anything we couldn't evict at the MRU end, so it
+      // stays in the LRU and gets re-considered on future adds.
+      for (const [k, fn] of refused) order.set(k, fn)
+    },
+    remove(key) {
+      order.delete(key)
+    },
+  }
+}
+
+const ThumbLRUContext = createContext(null)
+
+// Shared FIFO queue that serialises grid thumbnail IPC calls. Each thumb
+// calls `enqueue(shouldRun, work)` — the queue only executes `work()` when
+// a worker slot opens AND `shouldRun()` still returns true (i.e., the
+// thumb is still on-screen). This lets us drop requests for thumbs that
+// scrolled past before they reached the front of the queue.
+function createThumbLoadQueue(cap) {
+  const pending = []
+  let active = 0
+
+  const pump = () => {
+    while (active < cap && pending.length > 0) {
+      const task = pending.shift()
+      if (!task.shouldRun()) continue
+      active++
+      task
+        .work()
+        .catch(() => {})
+        .finally(() => {
+          active--
+          pump()
+        })
+    }
+  }
+
+  return {
+    enqueue(shouldRun, work) {
+      pending.push({ shouldRun, work })
+      pump()
+    },
+  }
+}
+
+const ThumbLoadQueueContext = createContext(null)
+
 const LazyThumbnail = ({ outputPath, dateStr, index, onClick }) => {
   const [b64, setB64] = useState(null)
   const hostRef = useRef(null)
   const observerApi = useContext(ObserverContext)
+  const lru = useContext(ThumbLRUContext)
+  const queue = useContext(ThumbLoadQueueContext)
+  const visibleRef = useRef(false)
+  const loadedRef = useRef(false)
+  const cancelledRef = useRef(false)
 
   useEffect(() => {
     if (!outputPath || !hostRef.current || !observerApi) return
     const el = hostRef.current
-    let cancelled = false
+    cancelledRef.current = false
 
-    observerApi.observe(el, () => {
-      window.electronAPI.getImageBase64(outputPath).then((data) => {
-        if (!cancelled) setB64(data)
-      })
-    })
+    const load = () => {
+      if (loadedRef.current || cancelledRef.current) return
+      loadedRef.current = true
+      const task = () =>
+        window.electronAPI
+          .getImageBase64(outputPath, { maxDim: GRID_THUMB_MAX_DIM })
+          .then((data) => {
+            if (cancelledRef.current || !visibleRef.current) return
+            setB64(data)
+            lru?.add(outputPath, () => {
+              if (visibleRef.current) return false
+              setB64(null)
+              loadedRef.current = false
+              return true
+            })
+          })
+          .catch(() => { loadedRef.current = false })
+      if (queue) {
+        queue.enqueue(
+          () => !cancelledRef.current && visibleRef.current,
+          task,
+        )
+      } else {
+        task()
+      }
+    }
+
+    observerApi.observe(
+      el,
+      () => { visibleRef.current = true; load() },
+      () => { visibleRef.current = false },
+    )
 
     return () => {
-      cancelled = true
+      cancelledRef.current = true
       observerApi.unobserve(el)
+      lru?.remove(outputPath)
     }
-  }, [outputPath, observerApi])
+  }, [outputPath, observerApi, lru, queue])
 
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -95,17 +214,45 @@ const LazyThumbnail = ({ outputPath, dateStr, index, onClick }) => {
 
 const FullscreenViewer = ({ items, initialIndex, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
-  const [b64, setB64] = useState(null)
+  // imgUrl is a `blob:` URL so we can revokeObjectURL on unmount or
+  // navigation. Using a base64 data URL would leave the decoded bitmap
+  // pinned in Chromium's image cache (keyed by URL), which accumulates
+  // over multiple opens/navigations until the renderer crashes.
+  const [imgUrl, setImgUrl] = useState(null)
+  const urlRef = useRef(null)
   const closeBtnRef = useRef(null)
 
   useEffect(() => {
     const item = items[currentIndex]
     if (!item || !item.outputPath) return
-    setB64(null)
-    window.electronAPI.getImageBase64(item.outputPath).then((data) => {
-      setB64(data)
-    })
+    let cancelled = false
+    window.electronAPI
+      .getImageBase64(item.outputPath, { maxDim: VIEWER_MAX_DIM })
+      .then((data) => {
+        if (cancelled) return
+        // base64 → Uint8Array → Blob → blob URL.
+        const binary = atob(data)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+        const blob = new Blob([bytes], { type: 'image/jpeg' })
+        const next = URL.createObjectURL(blob)
+        // Revoke the previous URL only after the new one is ready, so the
+        // IMG never points at a revoked blob mid-swap.
+        if (urlRef.current) URL.revokeObjectURL(urlRef.current)
+        urlRef.current = next
+        setImgUrl(next)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [currentIndex, items])
+
+  // Final cleanup on unmount: revoke whatever URL is still resident.
+  useEffect(() => () => {
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current)
+      urlRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -133,8 +280,8 @@ const FullscreenViewer = ({ items, initialIndex, onClose }) => {
       aria-label="Photo viewer"
     >
       <div className="fullscreen-content" onClick={(e) => e.stopPropagation()}>
-        {b64 ? (
-          <img src={`data:image/jpeg;base64,${b64}`} className="fullscreen-img" alt="" />
+        {imgUrl ? (
+          <img src={imgUrl} className="fullscreen-img" alt="" />
         ) : (
           <div className="fullscreen-img placeholder text-muted">Loading high-res image…</div>
         )}
@@ -191,6 +338,10 @@ export default function ResultsView() {
   // remounts. All LazyThumbnail children consume it via context.
   const observerRef = useRef(null)
   if (!observerRef.current) observerRef.current = createSharedObserver()
+  const lruRef = useRef(null)
+  if (!lruRef.current) lruRef.current = createThumbLRU(GRID_THUMB_RESIDENT_CAP)
+  const queueRef = useRef(null)
+  if (!queueRef.current) queueRef.current = createThumbLoadQueue(GRID_THUMB_LOAD_CONCURRENCY)
   useEffect(() => () => observerRef.current?.disconnect(), [])
 
   const handleExportFolder = async () => {
@@ -227,6 +378,8 @@ export default function ResultsView() {
 
   return (
     <ObserverContext.Provider value={observerRef.current}>
+      <ThumbLRUContext.Provider value={lruRef.current}>
+      <ThumbLoadQueueContext.Provider value={queueRef.current}>
       <div className="view-container flex-col p-0">
         <div className="results-gallery">
           <div className="title">{alignedResults.length} Aligned Photos</div>
@@ -285,6 +438,8 @@ export default function ResultsView() {
           />
         )}
       </div>
+      </ThumbLoadQueueContext.Provider>
+      </ThumbLRUContext.Provider>
     </ObserverContext.Provider>
   )
 }

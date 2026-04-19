@@ -11,7 +11,7 @@ const THUMB_CACHE_CAP = 300
 
 export default function DailySelectionView() {
   const {
-    dailyGroups, setDailyGroups, setDailyGroupSelection,
+    dailyGroups, setDailyGroups, setDailyGroupSelection, movePhotoToDate,
     referenceAlignmentPoints, referenceImageSize, referenceOutputSize,
     setAlignedResults, setAlignProgress, setStep, setError,
   } = useAlignmentStore()
@@ -19,6 +19,8 @@ export default function DailySelectionView() {
   const [activeGroupIdx, setActiveGroupIdx] = useState(null)
   const [thumbCache, setThumbCache] = useState({})
   const [loading, setLoading] = useState(false)
+  const [dragOverDate, setDragOverDate] = useState(null)
+  const dragPayloadRef = useRef(null)
 
   // Simple in-memory LRU — order of keys matters for eviction.
   // We re-insert a key on access so it becomes "most recent".
@@ -105,6 +107,24 @@ export default function DailySelectionView() {
     }
     pump()
   }, [activeGroupIdx, activeGroup])
+
+  const handleDropOnDate = (dateKey) => {
+    const payload = dragPayloadRef.current
+    dragPayloadRef.current = null
+    setDragOverDate(null)
+    if (!payload) return
+    const { groupIdx, photoIdx } = payload
+    const src = dailyGroups[groupIdx]
+    if (!src || src.date === dateKey) return
+
+    movePhotoToDate(groupIdx, photoIdx, dateKey)
+
+    // Refocus the view on whichever group now owns the moved photo. The store
+    // resorts by date and drops empty groups, so re-find by target date.
+    const latest = useAlignmentStore.getState().dailyGroups
+    const nextIdx = latest.findIndex((g) => g.date === dateKey)
+    if (nextIdx >= 0) setActiveGroupIdx(nextIdx)
+  }
 
   const handleUploadForDay = async (dateKey) => {
     const filePath = await window.electronAPI.chooseFile()
@@ -199,9 +219,11 @@ export default function DailySelectionView() {
                     const isMulti = group && group.photos.length > 1
                     const isActive = groupIdx === activeGroupIdx
 
+                    const isDragOver = dragOverDate === dateKey
                     let dayClass = 'cal-day'
                     if (hasPhoto) dayClass += isMulti ? ' has-multi' : ' has-single'
                     if (isActive) dayClass += ' active'
+                    if (isDragOver) dayClass += ' drag-over'
 
                     const label = hasPhoto
                       ? `${monthStr} ${day} — ${group.photos.length} photo${group.photos.length > 1 ? 's' : ''}`
@@ -215,6 +237,23 @@ export default function DailySelectionView() {
                         onClick={() => {
                           if (hasPhoto) setActiveGroupIdx(groupIdx)
                           else handleUploadForDay(dateKey)
+                        }}
+                        onDragOver={(e) => {
+                          if (!dragPayloadRef.current) return
+                          e.preventDefault()
+                          e.dataTransfer.dropEffect = 'move'
+                        }}
+                        onDragEnter={() => {
+                          if (dragPayloadRef.current) setDragOverDate(dateKey)
+                        }}
+                        onDragLeave={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget)) {
+                            setDragOverDate((d) => (d === dateKey ? null : d))
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          handleDropOnDate(dateKey)
                         }}
                         aria-label={label}
                         aria-pressed={isActive}
@@ -244,15 +283,29 @@ export default function DailySelectionView() {
                   const thumb = thumbCache[photo.filePath]
                   const isSelected = pi === activeGroup.selectedIndex
                   const pct = Math.round(photo.similarityScore * 100)
+                  const canMove = activeGroup.photos.length > 1
+                  const timeLabel = canMove ? formatTime(photo.creationDate) : null
                   return (
                     <button
                       type="button"
                       key={photo.filePath}
                       className={`daily-photo-card ${isSelected ? 'selected' : ''}`}
                       onClick={() => setDailyGroupSelection(activeGroupIdx, pi)}
+                      draggable={canMove}
+                      onDragStart={(e) => {
+                        if (!canMove) return
+                        dragPayloadRef.current = { groupIdx: activeGroupIdx, photoIdx: pi }
+                        e.dataTransfer.effectAllowed = 'move'
+                        e.dataTransfer.setData('text/plain', `${activeGroupIdx}:${pi}`)
+                      }}
+                      onDragEnd={() => {
+                        dragPayloadRef.current = null
+                        setDragOverDate(null)
+                      }}
                       role="radio"
                       aria-checked={isSelected}
-                      aria-label={`${photo.filename}, ${pct}% similarity${isSelected ? ', selected' : ''}`}
+                      aria-label={`${photo.filename}, ${pct}% similarity${timeLabel ? `, taken at ${timeLabel}` : ''}${isSelected ? ', selected' : ''}${canMove ? '. Drag to another calendar day to move.' : ''}`}
+                      title={canMove ? 'Drag to another day on the calendar to move this photo. Not saved across rescans.' : undefined}
                     >
                       {thumb ? (
                         <img src={`data:image/jpeg;base64,${thumb}`} className="daily-photo-img" alt="" />
@@ -262,6 +315,8 @@ export default function DailySelectionView() {
 
                       {isSelected && <div className="badge-selected">Selected</div>}
 
+                      {timeLabel && <div className="badge-time">{timeLabel}</div>}
+
                       <div className="badge-score">{pct}%</div>
                     </button>
                   )
@@ -270,6 +325,9 @@ export default function DailySelectionView() {
               {activeGroup.photos[activeGroup.selectedIndex] && (
                 <div className="daily-filename">
                   Selected: {activeGroup.photos[activeGroup.selectedIndex].filename}
+                  {activeGroup.photos.length > 1 && formatTime(activeGroup.photos[activeGroup.selectedIndex].creationDate)
+                    ? ` · ${formatTime(activeGroup.photos[activeGroup.selectedIndex].creationDate)}`
+                    : ''}
                 </div>
               )}
             </>
@@ -305,4 +363,15 @@ function formatDate(dateStr) {
   return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString(undefined, {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   })
+}
+
+// HH:MM in the user's locale. Photos stamped at exactly local noon are
+// reassigned photos (no real EXIF timestamp) — suppress the badge for those
+// so we don't mislead the user into thinking 12:00 is a genuine shoot time.
+function formatTime(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return null
+  if (d.getHours() === 12 && d.getMinutes() === 0 && d.getSeconds() === 0) return null
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
 }

@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Image utilities
-  getImageBase64: (filePath) => ipcRenderer.invoke('image:getBase64', { filePath }),
+  getImageBase64: (filePath, opts = {}) => ipcRenderer.invoke('image:getBase64', { filePath, maxDim: opts.maxDim }),
   detectFaceBounds: (imagePath) => ipcRenderer.invoke('face:detectBounds', { imagePath }),
   straightenImage: (params) => ipcRenderer.invoke('image:straighten', params),
 

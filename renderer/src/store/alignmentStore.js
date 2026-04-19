@@ -61,6 +61,49 @@ const useAlignmentStore = create((set, get) => ({
     updated[groupIndex] = { ...updated[groupIndex], selectedIndex: photoIndex }
     return { dailyGroups: updated }
   }),
+  movePhotoToDate: (fromGroupIdx, photoIdx, toDateKey) => set((state) => {
+    const srcGroup = state.dailyGroups[fromGroupIdx]
+    if (!srcGroup || !srcGroup.photos[photoIdx]) return {}
+    if (srcGroup.date === toDateKey) return {}
+
+    // Stamp the photo with a new creationDate pinned to local noon of the
+    // target day. `new Date('YYYY-MM-DDT12:00:00')` without a TZ suffix is
+    // parsed as local time per ISO 8601; `groupByDay` re-buckets by the
+    // local-date portion of creationDate, so the photo lands in the target
+    // day regardless of the user's timezone.
+    const movedPhoto = {
+      ...srcGroup.photos[photoIdx],
+      creationDate: new Date(toDateKey + 'T12:00:00').toISOString(),
+    }
+
+    const rebuilt = state.dailyGroups.map((g, i) => {
+      if (i !== fromGroupIdx) return { ...g, photos: [...g.photos] }
+      const remaining = g.photos.filter((_, pi) => pi !== photoIdx)
+      // Keep the user's selection pointed at the same photo. If we removed
+      // a photo before the selection, shift left by one; if we removed the
+      // selected photo itself, fall back to the photo now occupying its slot
+      // (clamped to the new end).
+      let selectedIndex
+      if (photoIdx < g.selectedIndex) selectedIndex = g.selectedIndex - 1
+      else if (photoIdx === g.selectedIndex) selectedIndex = Math.min(g.selectedIndex, Math.max(0, remaining.length - 1))
+      else selectedIndex = g.selectedIndex
+      return { ...g, photos: remaining, selectedIndex }
+    })
+
+    const tgtIdx = rebuilt.findIndex((g) => g.date === toDateKey)
+    if (tgtIdx === -1) {
+      rebuilt.push({ date: toDateKey, photos: [movedPhoto], selectedIndex: 0 })
+    } else {
+      const tgt = rebuilt[tgtIdx]
+      const merged = [...tgt.photos, movedPhoto].sort((a, b) => b.similarityScore - a.similarityScore)
+      rebuilt[tgtIdx] = { ...tgt, photos: merged }
+    }
+
+    const nonEmpty = rebuilt
+      .filter((g) => g.photos.length > 0)
+      .sort((a, b) => a.date.localeCompare(b.date))
+    return { dailyGroups: nonEmpty }
+  }),
 
   // --- Alignment ---
   alignProgress: null,         // { current, total }

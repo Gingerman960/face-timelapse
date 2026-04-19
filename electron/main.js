@@ -402,10 +402,33 @@ ipcMain.handle('export:toFolder', async (event, { alignedResults, outputFolder }
   return outputPaths
 })
 
-// Get base64 of a temp file (for displaying results in renderer)
-ipcMain.handle('image:getBase64', async (event, { filePath }) => {
-  const data = await fs.promises.readFile(filePath)
-  return data.toString('base64')
+// Get base64 of a temp file (for displaying results in renderer). When
+// `maxDim` is supplied, the image is decoded, scaled so its larger edge
+// fits within maxDim, and re-encoded as JPEG — this keeps renderer memory
+// bounded when the grid shows thousands of aligned photos.
+ipcMain.handle('image:getBase64', async (event, { filePath, maxDim }) => {
+  if (!maxDim) {
+    const data = await fs.promises.readFile(filePath)
+    return data.toString('base64')
+  }
+
+  const { createCanvas, loadImage } = require('@napi-rs/canvas')
+  const img = await loadImage(filePath)
+  const longEdge = Math.max(img.width, img.height)
+  if (longEdge <= maxDim) {
+    // Smaller than the cap — no point re-encoding, just read the file.
+    const data = await fs.promises.readFile(filePath)
+    return data.toString('base64')
+  }
+
+  const scale = maxDim / longEdge
+  const w = Math.round(img.width * scale)
+  const h = Math.round(img.height * scale)
+  const canvas = createCanvas(w, h)
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(img, 0, 0, w, h)
+  const jpeg = await canvas.encode('jpeg', 82)
+  return jpeg.toString('base64')
 })
 
 // Dialog: choose folder

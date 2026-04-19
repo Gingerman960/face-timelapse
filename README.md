@@ -11,7 +11,8 @@ A cross-platform desktop app that aligns a face across many photos and exports t
 
 - **Reference-based matching** — geometric face embeddings (45 features from 68 landmarks) find the same person across thousands of photos, independent of lighting or color.
 - **Procrustes alignment** — translates, rotates, and scales each face so that eyes, nose, and mouth land in the same pixel positions as the reference.
-- **Daily deduplication** — when you have multiple photos per day, the app groups them by date and picks the best match by default (editable).
+- **Soft backdrop extension** — where the aligned face doesn't cover the full output canvas, the source image is used as a darkened backdrop instead of hard black borders.
+- **Daily deduplication** — when you have multiple photos per day, the app groups them by date and picks the best match by default. Drag a photo onto another calendar day to reassign it.
 - **Parallel workers** — detection, embedding, and alignment run on a worker per CPU core.
 - **Local-first** — nothing leaves your machine. No accounts, no API calls.
 - **Video export** — configurable fps and total duration via bundled ffmpeg.
@@ -29,7 +30,7 @@ _See [`assets/screenshots/README.md`](./assets/screenshots/README.md) for how to
 
 ## Install
 
-Requires Node.js 18+ and platform build tools (Xcode CLT on macOS, MSVC Build Tools on Windows, `build-essential` on Linux) for the native dependencies (`canvas`, `sharp`).
+Requires Node.js 18+. `@napi-rs/canvas` ships prebuilt binaries, so no system canvas deps are needed; `sharp` is a native dep that usually installs from prebuilt too, but platform build tools (Xcode CLT on macOS, MSVC Build Tools on Windows, `build-essential` on Linux) are recommended as a fallback.
 
 ```bash
 git clone https://github.com/Gingerman960/face-timelapse.git
@@ -129,7 +130,7 @@ PRs welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 - [@vladmandic/face-api](https://github.com/vladmandic/face-api) — MIT, provides both the detection/landmark models and the WASM runtime used in Electron
 - [TensorFlow.js](https://github.com/tensorflow/tfjs) — Apache 2.0, the runtime underlying face-api
 - [sharp](https://github.com/lovell/sharp) — Apache 2.0, fast image I/O and transforms
-- [canvas (node-canvas)](https://github.com/Automattic/node-canvas) — MIT, native Canvas API used by face-api in Node
+- [@napi-rs/canvas](https://github.com/Brooooooklyn/canvas) — MIT, prebuilt-binary Canvas 2D used by the alignment pipeline
 - [fluent-ffmpeg](https://github.com/fluent-ffmpeg/node-fluent-ffmpeg) — MIT, wrapper around bundled `ffmpeg-static` (LGPL ffmpeg binaries)
 - [exifr](https://github.com/MikeKovarik/exifr) — MIT, EXIF parsing for photo creation dates
 - [Electron](https://www.electronjs.org/), [React](https://react.dev/), [Vite](https://vitejs.dev/), [Zustand](https://github.com/pmndrs/zustand)

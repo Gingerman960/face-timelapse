@@ -95,19 +95,30 @@ async function alignImage(sourceBuffer, srcPoints, refPoints, outputSize) {
   const canvas = createCanvas(outputSize.w, outputSize.h)
   const ctx = canvas.getContext('2d')
 
-  // Black background
-  ctx.fillStyle = '#000000'
+  const img = await loadImage(sourceBuffer)
+
+  // Soft source-derived backdrop instead of black. Stretch the source to
+  // cover the output canvas, then darken, so anywhere the aligned face
+  // doesn't reach is a softened extension of the same photo rather than a
+  // hard black rectangle.
+  const coverScale = Math.max(outputSize.w / img.width, outputSize.h / img.height)
+  const backdropW = img.width * coverScale
+  const backdropH = img.height * coverScale
+  const backdropX = (outputSize.w - backdropW) / 2
+  const backdropY = (outputSize.h - backdropH) / 2
+  ctx.drawImage(img, backdropX, backdropY, backdropW, backdropH)
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
   ctx.fillRect(0, 0, outputSize.w, outputSize.h)
 
-  // Apply transform and draw
+  // Apply transform and draw aligned foreground on top.
   // Canvas API: setTransform(a, b, c, d, e, f)
   // where: x' = a*x + c*y + e, y' = b*x + d*y + f
   // Swift CGAffineTransform: x' = a*x + c*y + tx, y' = b*x + d*y + ty
   // So canvas {a,b,c,d,e,f} = swift {a,b,c,d,tx,ty} — direct 1:1 mapping
   ctx.setTransform(a, b, c, d, tx, ty)
-
-  const img = await loadImage(sourceBuffer)
   ctx.drawImage(img, 0, 0)
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
 
   return canvas.toBuffer('image/png')
 }
