@@ -434,8 +434,10 @@ fn adding_a_photo_is_refused_while_a_job_runs_without_analyzing() {
 fn reference_and_folder_validation() {
     let t = TestCore::new();
     let err = |r: Result<_, crate::ipc::IpcError>| r.map(|_: ()| ()).expect_err("error").kind;
+    // Never granted, and absolute on this platform (a Windows path needs a drive).
+    let nope = std::path::Path::new(if cfg!(windows) { r"C:\nope" } else { "/nope" });
     assert_eq!(
-        err(reference::set_photo(&t.core, "/nope/x.jpg").map(|_| ())),
+        err(reference::set_photo(&t.core, &nope.join("x.jpg").to_string_lossy()).map(|_| ())),
         ErrorKind::PermissionDenied,
         "not chosen by the user"
     );
@@ -484,7 +486,7 @@ fn reference_and_folder_validation() {
         ErrorKind::InvalidArgument
     );
     assert_eq!(
-        err(folder::set_folder(&t.core, "/nope/dir").map(|_| ())),
+        err(folder::set_folder(&t.core, &nope.join("dir").to_string_lossy()).map(|_| ())),
         ErrorKind::PermissionDenied
     );
     assert_eq!(

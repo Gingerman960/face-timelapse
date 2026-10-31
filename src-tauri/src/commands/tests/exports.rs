@@ -505,10 +505,13 @@ fn open_path_opens_finished_videos_and_nothing_else() {
     std::fs::write(&other, b"x").expect("write");
     assert_eq!(refused(&other), answer);
     assert_eq!(refused(std::path::Path::new("relative/v.mp4")), answer);
-    assert_eq!(
-        refused(&video.parent().expect("dir").join("x/../v.mp4")),
-        answer
+    // Spelled as a string: `join` onto a Windows `\\?\` path would resolve the `..`.
+    let dotdot = format!(
+        "{}{sep}x{sep}..{sep}v.mp4",
+        video.parent().expect("dir").display(),
+        sep = std::path::MAIN_SEPARATOR
     );
+    assert_eq!(refused(std::path::Path::new(&dotdot)), answer);
     // Outputs that are not finished videos: an image export folder, files in
     // it, another extension, a remote spelling, a folder named like a video.
     let out = t.root.path().canonicalize().expect("root").join("out");
