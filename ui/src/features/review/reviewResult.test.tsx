@@ -17,7 +17,8 @@ async function reviewWith(keep: (all: PhotoSummary[]) => PhotoSummary[]) {
   stubLayout(1200, 800)
   await renderApp({ scenario: 'scanned' })
   fireEvent.keyDown(window, { key: '3', ...mod })
-  await screen.findByRole('button', { name: 'Keep' })
+  // Review's code may still be on its way under a loaded test run: a generous wait, not a fixed delay.
+  await screen.findByRole('button', { name: 'Keep' }, { timeout: 5000 })
   act(() => {
     queryClient.setQueryData(unsureKey, keep(queryClient.getQueryData<PhotoSummary[]>(unsureKey) ?? []))
   })

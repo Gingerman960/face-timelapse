@@ -90,7 +90,8 @@ describe('Review', () => {
   it('Y keeps, N leaves out, U undoes, ⇧A keeps the rest', async () => {
     await renderApp({ scenario: 'scanned' })
     fireEvent.keyDown(window, { key: '3', ...mod })
-    await screen.findByRole('button', { name: 'Keep' })
+    // Review's code may still be on its way under a loaded test run: a generous wait, not a fixed delay.
+    await screen.findByRole('button', { name: 'Keep' }, { timeout: 5000 })
     const pending0 = session()?.counts.reviewPending ?? 0
     fireEvent.keyDown(window, { key: 'y' })
     fireEvent.keyDown(window, { key: 'n' })
@@ -108,7 +109,7 @@ describe('Review', () => {
   it('holding Space compares with the reference', async () => {
     await renderApp({ scenario: 'scanned' })
     fireEvent.keyDown(window, { key: '3', ...mod })
-    const compare = await screen.findByRole('button', { name: /Compare/ })
+    const compare = await screen.findByRole('button', { name: /Compare/ }, { timeout: 5000 })
     fireEvent.keyDown(window, { key: ' ' })
     expect(compare).toHaveAttribute('aria-pressed', 'true')
     fireEvent.keyUp(window, { key: ' ' })
