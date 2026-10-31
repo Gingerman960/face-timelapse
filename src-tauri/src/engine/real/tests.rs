@@ -70,7 +70,11 @@ fn a_missing_fingerprint_is_never_remembered() {
     }
     // The models appear (e.g. a transient read error is over).
     for name in [YUNET_FILE, SFACE_FILE] {
-        std::os::unix::fs::symlink(repo_models.join(name), dir.path().join(name)).expect("link");
+        let (model, link) = (repo_models.join(name), dir.path().join(name));
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(model, link).expect("link");
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(model, link).expect("link");
     }
     let real = e.fingerprint().expect("readable now");
     assert_eq!(

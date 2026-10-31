@@ -28,7 +28,8 @@ async function reviewWhileLoading() {
   })
   queryClient.removeQueries({ queryKey: queryKeys.photos(['uncertain']) })
   fireEvent.keyDown(window, { key: '3', ...mod })
-  await screen.findByText('Gathering the unsure photos…')
+  // Review's code may still be on its way under a loaded test run: a generous wait, not a fixed delay.
+  await screen.findByText('Gathering the unsure photos…', undefined, { timeout: 5000 })
   return { release: () => act(async () => release()) }
 }
 

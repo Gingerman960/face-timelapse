@@ -31,7 +31,7 @@ use parking_lot::Mutex;
 use serde_json::{Value, json};
 use tauri::{Manager, Runtime, WebviewWindow};
 
-use crate::script::{Command, Line, Target};
+use crate::script::{Command, Line};
 
 /// Environment variable naming the script file.
 pub const SCRIPT_ENV: &str = "FT_E2E_SCRIPT";
@@ -41,6 +41,7 @@ pub const OUT_ENV: &str = "FT_E2E_OUT";
 const POLL: Duration = Duration::from_millis(25);
 /// Pause between the parts of a gesture (press/release, key down/up), so
 /// WebKit sees them as separate input like a person's.
+#[cfg(target_os = "macos")]
 const GESTURE_GAP: Duration = Duration::from_millis(24);
 
 static DIALOG_ANSWERS: Mutex<VecDeque<Option<PathBuf>>> = parking_lot::const_mutex(VecDeque::new());
@@ -221,7 +222,9 @@ impl<R: Runtime> Runner<R> {
         Ok(serde_json::from_str(&raw).unwrap_or(Value::String(raw)))
     }
 
-    fn resolve(&self, target: &Target) -> Result<script::Resolved, String> {
+    /// Where a target is on screen; only the native gestures need it.
+    #[cfg(target_os = "macos")]
+    fn resolve(&self, target: &script::Target) -> Result<script::Resolved, String> {
         let raw = call_js(
             &self.window,
             script::target_body(target)?,

@@ -27,12 +27,19 @@ fn app(t: &TestCore) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     (app, window)
 }
 
+/// The app's own origin, which the capability's `local` URLs mean.
+const APP_URL: &str = if cfg!(target_os = "windows") {
+    "http://tauri.localhost"
+} else {
+    "tauri://localhost"
+};
+
 fn invoke(w: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Result<Value, Value> {
     let request = InvokeRequest {
         cmd: cmd.into(),
         callback: CallbackFn(0),
         error: CallbackFn(1),
-        url: "tauri://localhost".parse().expect("url"),
+        url: APP_URL.parse().expect("url"),
         body: InvokeBody::Json(args),
         headers: Default::default(),
         invoke_key: INVOKE_KEY.to_string(),

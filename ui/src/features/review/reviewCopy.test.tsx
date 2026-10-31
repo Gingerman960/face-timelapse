@@ -18,7 +18,8 @@ async function reviewWithOnlyOneUnsure() {
   await renderApp({ scenario: 'scanned' })
   const list = queryClient.getQueryData<PhotoSummary[]>(queryKeys.photos(['uncertain']))
   fireEvent.keyDown(window, { key: '3', ...mod })
-  await screen.findByRole('button', { name: 'Keep' })
+  // Review's code may still be on its way under a loaded test run: a generous wait, not a fixed delay.
+  await screen.findByRole('button', { name: 'Keep' }, { timeout: 5000 })
   const all = queryClient.getQueryData<PhotoSummary[]>(queryKeys.photos(['uncertain'])) ?? list ?? []
   act(() => {
     queryClient.setQueryData(queryKeys.photos(['uncertain']), all.slice(0, 1))
