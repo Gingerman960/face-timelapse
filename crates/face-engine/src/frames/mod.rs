@@ -729,7 +729,10 @@ pub(crate) mod tests {
 
     pub(crate) fn set_age(path: &Path, days: u64) {
         let when = std::time::SystemTime::now() - std::time::Duration::from_secs(days * 86_400);
-        std::fs::File::open(path)
+        // Write access: Windows needs it to change a file's times.
+        std::fs::File::options()
+            .write(true)
+            .open(path)
             .and_then(|f| f.set_modified(when))
             .expect("set mtime");
     }
