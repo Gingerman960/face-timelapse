@@ -1,0 +1,181 @@
+/* Global base: reset, type utilities, focus, key caps, scrollbars.
+   Tokens live in tokens.css (copied verbatim from the design prototype). */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+body {
+  background: var(--canvas);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+img { display: block; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: default; }
+h1, h2, h3, h4, p, dl, dd, figure, ol, ul { margin: 0; }
+/* The scale's strong weight, not the UA's 700: four weights only (tokens.css). */
+b, strong { font-weight: var(--weight-strong); }
+ol, ul { padding: 0; list-style: none; }
+input, textarea { user-select: text; -webkit-user-select: text; }
+::selection { background: var(--mark-soft); color: var(--text-1); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* Scrollbars carry the palette. */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.icon { width: 16px; height: 16px; flex: none; }
+.mono { font-family: var(--font-mono); font-stretch: 87.5%; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.mono-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--text-2);
+}
+.label-caps {
+  font-size: var(--text-label);
+  font-stretch: var(--width-condensed);
+  font-weight: var(--weight-strong);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-3);
+  line-height: var(--leading-tight);
+}
+.tabular { font-variant-numeric: tabular-nums; }
+/* A meta line in words: the UI face, only its numerals in the data font (DESIGN: mono is for data, never prose). */
+.meta { font-size: var(--text-small); color: var(--text-2); font-variant-numeric: tabular-nums; }
+/* Martian's numerals stand about 10 % taller and darker than Bricolage's, so inside a sentence
+   they step down to match (critique round 4); data on its own keeps its token size. */
+.digits { font-family: var(--font-mono); font-stretch: 87.5%; font-variant-numeric: tabular-nums; letter-spacing: 0; font-size: calc(1em * 0.9); }
+/* A separator inside a number (DataText's .sep): the mono cell is a full digit wide, so the
+   comma, colon and point are pulled in from both sides to read as one number (critique round 6, P2-5). */
+.digits .sep { margin-inline: -0.16em; }
+.muted { color: var(--text-3); }
+
+kbd {
+  font-family: var(--font-sans);
+  font-size: var(--text-label);
+  font-weight: var(--weight-strong);
+  color: var(--text-3);
+  border: var(--hair) solid var(--line-strong);
+  border-radius: 4px;
+  padding: 1px 4px;
+  line-height: var(--leading-label);
+  white-space: nowrap;
+}
+
+/* Edge print: the film-rebate lettering on contact strips (always aria-hidden). */
+.edge {
+  /* Clipped to its cell with 6 px to spare, so neighbouring labels never collide (critique P2-14). */
+  max-width: calc(100% - 7px);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-edge);
+  font-stretch: 75%;
+  letter-spacing: var(--tracking-edge);
+  color: var(--edge-ink);
+  white-space: nowrap;
+  line-height: var(--leading-edge);
+}
+.edge b { font-weight: var(--weight-strong); color: var(--z8); }
+/* EdgePrint draws its text as generated content (never part of a control's name). */
+.edge[data-n]::before { content: attr(data-n); }
+.edge[data-day]::after { content: attr(data-day); }
+.edge[data-n][data-day]::before { font-weight: var(--weight-strong); color: var(--z8); margin-right: 0.7em; }
+
+/* Rebate tones live with the base so every strip shares them. */
+:root, :root[data-theme="dark"] { --rebate: oklch(7.5% 0.004 80); --edge-ink: var(--z6); --crop-outside: oklch(6% 0 0 / 0.75); }
+:root[data-theme="light"] { --rebate: oklch(17% 0.004 80); --edge-ink: var(--z7); --crop-outside: oklch(98% 0.003 80 / 0.66); }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --rebate: oklch(17% 0.004 80); --edge-ink: var(--z7); --crop-outside: oklch(98% 0.003 80 / 0.66); }
+}
+/* The rebate is a material with its own ink (critique round 4): film prints black
+   in both themes, so on it "where you are" (playhead, current item, selection,
+   focus) is drawn in Z9, never the page's ink, which is Z0 in light (1.04:1).
+   Scoped to what sits on the film, so a strip's own focus ring stays page ink. */
+:root { --rebate-ink: var(--z9); }
+/* Its decisions and warnings too (critique round 5): in light the chinagraph and safelight are
+   dark inks (3.1:1 on the film), so on the rebate they take the darkroom's light ones (≥ 6:1). */
+:root { --rebate-mark: oklch(68% 0.185 33); --rebate-safelight: oklch(80% 0.13 78); }
+:is(.strip, .filmstrip, .grid-row, .q-strip, .neighbours, .rebate) > * { --cursor: var(--rebate-ink); --focus: var(--rebate-ink); --mark: var(--rebate-mark); --safelight: var(--rebate-safelight); }
+
+/* Develop-in: a print surfacing in the tray (opacity overlay only). */
+.develop { position: relative; }
+.develop::after {
+  content: ""; position: absolute; inset: 0; background: var(--canvas); border-radius: inherit; pointer-events: none;
+  animation: ft-develop var(--dur-develop) var(--ease-out) both; animation-delay: var(--d, 0ms);
+}
+@keyframes ft-develop { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ft-fade { from { opacity: 0; } }
+/* Latent film breathing (the live scan's undeveloped frames, Review's gathering prints). */
+@keyframes ft-latent { from { opacity: 0.4; } to { opacity: 1; } }
+@keyframes ft-sweep { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
+
+.indeterminate {
+  display: inline-block; width: 36px; height: 2px; border-radius: 2px; flex: none;
+  position: relative; overflow: hidden; background: var(--line);
+}
+/* The sweep is a translated highlight (compositor), not a moving background (critique round 4). */
+.indeterminate::after {
+  content: ""; position: absolute; inset: 0; width: 50%;
+  background: linear-gradient(90deg, transparent, var(--text-2), transparent);
+  animation: ft-sweep 1.1s var(--ease-standard) infinite;
+}
+
+/* Reduced motion: every state change still shows, and short opacity fades
+   stay (they carry "this just appeared" without movement). What goes is
+   movement: slides, scale, the drawn grease-pencil stroke, sweeping
+   indicators, sliding knobs and press nudges. */
+@media (prefers-reduced-motion: reduce) {
+  /* !important: these must beat later feature stylesheets of equal specificity. */
+  html { scroll-behavior: auto; }
+  .indeterminate { background: var(--text-3) !important; }
+  .indeterminate::after { animation: none !important; display: none; }
+  :is(.sheet, .toast) { animation-name: ft-fade !important; }
+  .develop::after { animation-delay: 0ms !important; }
+  .switch-row > i::after { transition: none !important; }
+  /* Every press nudge, chips, segments and the Saved diptych included (critique round 5, P3-24). */
+  :is(.btn-plate, .btn-quiet, .btn-stop, .btn-icon, .btn-decide, .btn-play, .chip, .chips button, .segmented button, .toast-action, .diptych-watch):active { transform: none !important; }
+}
+
+/* RetryImg gave up: hide the browser's broken-image icon, the cell keeps its own background. */
+img[data-failed] { visibility: hidden; }
+
+/* Continuity (critique rounds 4 and 5): the screen on show follows the step in
+   a View Transition (features/shell/stepTransition.ts). Every pair, old out and
+   new in, runs on one duration and one curve: View Transitions add the two
+   opacities (plus-lighter), so matched timing keeps their sum at one and the
+   darkroom never lifts toward grey (round 5, P1-1; the old screen used to
+   leave faster than the new one arrived). The print travels by identity: an
+   element names itself through data-vt-print and --vt-print (ft-day-…) only
+   while it shows that day, so the selected Days cell grows into the player's
+   frame of the same day, and back (round 5, P1-2). Names exist only while
+   html.vt is set. Reduced motion keeps the cross-fade and drops the travel. */
+:root.vt .main { view-transition-name: ft-main; }
+:root.vt [data-vt-print] { view-transition-name: var(--vt-print); view-transition-class: ft-print; }
+::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: var(--dur-base); animation-timing-function: var(--ease-standard); }
+::view-transition-group(*.ft-print), ::view-transition-old(*.ft-print), ::view-transition-new(*.ft-print) { animation-duration: var(--dur-slow); animation-timing-function: var(--ease-sheet); }
+::view-transition-old(*.ft-print), ::view-transition-new(*.ft-print) { height: 100%; object-fit: cover; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*) { animation: none !important; }
+  ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 120ms !important; }
+}

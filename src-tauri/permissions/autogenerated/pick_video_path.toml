@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pick-video-path"
+description = "Enables the pick_video_path command without any pre-configured scope."
+commands.allow = ["pick_video_path"]
+
+[[permission]]
+identifier = "deny-pick-video-path"
+description = "Denies the pick_video_path command without any pre-configured scope."
+commands.deny = ["pick_video_path"]

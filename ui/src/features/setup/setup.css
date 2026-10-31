@@ -1,0 +1,110 @@
+/* Reference screen: empty state (drop targets), crop editor, inspector. */
+
+.setup-empty { height: 100%; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr); align-items: center; gap: var(--s9); padding: var(--s4) var(--s9) var(--s9) var(--s8); }
+.drop-ref { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--s8); }
+.drop-frame { width: clamp(200px, 23vw, 330px); aspect-ratio: 3 / 4; position: relative; border-radius: 4px; background: var(--sunken); box-shadow: inset 0 0 0 1px var(--line-strong); display: grid; place-items: end center; padding-bottom: var(--s4); }
+.drop-frame svg.template { inset: 8%; width: 84%; height: 84%; filter: none; }
+.drop-frame svg.template * { stroke: var(--text-3); }
+.drop-frame svg.template .t-eye { fill: none; stroke: var(--text-3); }
+.drop-frame .label-caps { position: relative; }
+.drop-copy { display: grid; gap: var(--s3); max-width: 34ch; }
+.drop-copy h2 { font-size: var(--text-heading); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); line-height: var(--leading-heading); text-wrap: balance; }
+.drop-copy p, .drop-lib p { color: var(--text-2); font-size: var(--text-ui); line-height: var(--leading-prose); text-wrap: pretty; }
+.drop-copy .row { margin-top: var(--s3); }
+.drop-lib { display: grid; gap: var(--s2); align-content: center; justify-items: start; padding-left: var(--s8); border-left: var(--hair) solid var(--line); max-width: 380px; }
+.drop-lib > .icon { width: 28px; height: 28px; color: var(--text-3); margin-bottom: var(--s2); }
+.drop-lib h3 { font-size: var(--text-title); font-weight: var(--weight-strong); letter-spacing: var(--tracking-title); }
+.drop-lib .btn-quiet { margin-top: var(--s2); }
+.recent { display: grid; gap: 4px; margin-top: var(--s5); width: 100%; }
+.recent .label-caps { margin-bottom: 2px; }
+.recent button { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; padding: 6px 8px; margin: 0 -8px; border: 0; border-radius: var(--r-row); background: transparent; color: var(--text-1); font-size: var(--text-ui); }
+.recent button:hover { background: var(--hover); }
+.recent .icon { color: var(--text-3); width: 14px; height: 14px; }
+.recent span { display: grid; min-width: 0; }
+/* Paths arrive already middle-truncated (usePathDisplay); no rtl tricks, which add stray slashes and clip glyphs. */
+.path { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-3); }
+
+.setup-work { display: flex; height: 100%; }
+.setup-stage { --print-w: min(100%, calc((100dvh - 250px) * var(--ar))); flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--s3); padding: 0 var(--s8) var(--s7); }
+.caption-line { display: flex; gap: var(--s3); align-items: baseline; width: var(--print-w); min-width: 0; }
+.caption-line .mono-meta { color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.caption-line .caption-rotated { flex: none; color: var(--text-3); font-size: var(--text-label); }
+.crop-host { position: relative; width: var(--print-w); aspect-ratio: var(--ar); touch-action: none; }
+.ref-print { width: 100%; height: 100%; object-fit: cover; border-radius: var(--r-frame); box-shadow: var(--shadow-print); background: var(--sunken); }
+.crop-shade { position: absolute; inset: 0; border-radius: var(--r-frame); background: var(--crop-outside); pointer-events: none;
+  clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, calc(var(--x) * 100%) calc(var(--y) * 100%), calc((var(--x) + var(--w)) * 100%) calc(var(--y) * 100%), calc((var(--x) + var(--w)) * 100%) calc((var(--y) + var(--h)) * 100%), calc(var(--x) * 100%) calc((var(--y) + var(--h)) * 100%), calc(var(--x) * 100%) calc(var(--y) * 100%)); }
+.crop { position: absolute; left: calc(var(--x) * 100%); top: calc(var(--y) * 100%); width: calc(var(--w) * 100%); height: calc(var(--h) * 100%); box-shadow: inset 0 0 0 1px var(--guide); cursor: move; }
+.crop:focus-visible { outline-offset: 4px; }
+.crop[data-noface="true"] { box-shadow: inset 0 0 0 1.5px var(--safelight); }
+.crop svg.template { opacity: 0.9; }
+.corner { position: absolute; width: 18px; height: 18px; border: 0 solid var(--bracket); filter: drop-shadow(0 0 1px var(--bracket-halo)) drop-shadow(0 0 1.5px var(--bracket-halo)); }
+.corner.nw { left: -3px; top: -3px; border-width: 3px 0 0 3px; cursor: nwse-resize; }
+.corner.ne { right: -3px; top: -3px; border-width: 3px 3px 0 0; cursor: nesw-resize; }
+.corner.sw { left: -3px; bottom: -3px; border-width: 0 0 3px 3px; cursor: nesw-resize; }
+.corner.se { right: -3px; bottom: -3px; border-width: 0 3px 3px 0; cursor: nwse-resize; }
+.edge-hit { position: absolute; }
+.edge-hit.n, .edge-hit.s { left: 18px; right: 18px; height: 12px; cursor: ns-resize; }
+.edge-hit.n { top: -6px; } .edge-hit.s { bottom: -6px; }
+.edge-hit.e, .edge-hit.w { top: 18px; bottom: 18px; width: 12px; cursor: ew-resize; }
+.edge-hit.e { right: -6px; } .edge-hit.w { left: -6px; }
+.thirds { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(var(--guide), var(--guide)) 33.33% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--guide), var(--guide)) 66.66% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--guide), var(--guide)) 0 33.33% / 100% 1px no-repeat,
+  linear-gradient(var(--guide), var(--guide)) 0 66.66% / 100% 1px no-repeat; opacity: 0.55; }
+.anchor { position: absolute; left: calc(var(--ax) * 100% - 5px); top: calc(var(--ay) * 100% - 5px); width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--on-photo-ink), 0 0 0 2.5px var(--on-photo-edge); pointer-events: none; }
+.anchor::after { content: ""; position: absolute; inset: 3.5px; border-radius: 50%; background: var(--on-photo-ink); }
+.anchor.minor { width: 6px; height: 6px; left: calc(var(--ax) * 100% - 3px); top: calc(var(--ay) * 100% - 3px); box-shadow: 0 0 0 1px var(--on-photo-edge); background: var(--on-photo-ink); }
+.anchor.minor::after { display: none; }
+.crop-size { position: absolute; right: 6px; bottom: 6px; padding: 2px 6px; border-radius: 4px; background: var(--on-photo-shade); color: var(--on-photo-ink); font-size: var(--text-label); pointer-events: none; }
+.crop-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--r-pill); background: var(--on-photo-shade); color: var(--on-photo-ink); font-size: var(--text-small); font-weight: var(--weight-medium); white-space: nowrap; pointer-events: none; }
+.crop-hint .icon { color: var(--safelight); width: 14px; height: 14px; }
+
+svg.template { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; filter: drop-shadow(0 0 1px var(--guide-shadow)); }
+svg.template * { fill: none; stroke: var(--guide); stroke-width: 1; vector-effect: non-scaling-stroke; }
+svg.template ellipse, svg.template .t-chin { stroke-dasharray: 3 5; }
+
+.readouts { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s5); align-items: center; width: var(--print-w); font-size: var(--text-ui); color: var(--text-2); min-height: 24px; }
+.readouts > span { display: inline-flex; align-items: center; gap: 6px; }
+.readouts .icon.ok { width: 14px; height: 14px; color: var(--text-1); }
+.readouts b { font-weight: var(--weight-medium); color: var(--text-1); font-size: var(--text-label); }
+/* The drag hint is the readouts' own second line, right under them (critique round 5, P3-21). */
+.readouts .hint { flex-basis: 100%; font-size: var(--text-small); color: var(--text-3); }
+.readouts .warn { color: var(--text-1); }
+.readouts .warn .icon { color: var(--safelight); width: 15px; height: 15px; }
+.readouts .btn-text { margin-left: auto; }
+.setup-stage .notice { width: var(--print-w); }
+
+.aspects { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s1); }
+.aspects button { height: 62px; display: grid; grid-template-rows: 1fr auto; place-items: center; gap: 4px; padding: 9px 0 6px; border: 0; border-radius: var(--r-card); background: transparent; color: var(--text-2); font-size: var(--text-label); font-weight: var(--weight-medium); transition: background-color var(--dur-fast); }
+.aspects button:hover:not(:disabled) { background: var(--hover); color: var(--text-1); }
+.aspects button:disabled { opacity: 0.4; }
+.aspects i { display: block; border: 1.5px solid currentColor; border-radius: 2px; align-self: center; }
+.aspects i.free { border-style: dashed; }
+.aspects button[aria-checked="true"] { background: var(--raised); color: var(--text-1); box-shadow: var(--shadow-control); }
+.aspects button[aria-checked="true"] i { border-color: var(--text-1); border-width: 2px; }
+.lib-card { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 6px 10px 12px; margin-bottom: var(--s4); border-radius: var(--r-card); background: var(--raised); box-shadow: var(--shadow-control); }
+.lib-card > div { display: grid; min-width: 0; }
+.lib-card strong { font-weight: var(--weight-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-card .icon { color: var(--text-2); width: 20px; height: 20px; }
+.insp-section .btn-text { margin-top: var(--s3); }
+
+@media (max-width: 1180px) {
+  .setup-stage { padding: 0 var(--s5) var(--s5); }
+  .readouts .hint { display: none; }
+  .setup-empty { grid-template-columns: 1fr; gap: var(--s6); padding: var(--s4) var(--s7) var(--s7); align-content: center; }
+  .drop-lib { border-left: 0; padding-left: 0; border-top: var(--hair) solid var(--line); padding-top: var(--s5); max-width: none; }
+  .drop-frame { width: clamp(180px, 22vw, 240px); }
+}
+
+/* The first photo lands (signature moment 6): the print develops in (opacity with a brief
+   lift of contrast easing to neutral, on this one image), the template draws itself top to
+   bottom over it, and "Face found" is ticked by the pen (ReferenceReadouts). */
+.crop-host[data-arrival="true"] .ref-print { animation: ft-print-develop var(--dur-develop) var(--ease-out) both; }
+.crop-host[data-arrival="true"] .crop svg.template { animation: ft-template-draw var(--dur-slow) var(--ease-out) calc(var(--dur-develop) * 0.4) both; }
+@keyframes ft-print-develop { from { opacity: 0; filter: contrast(0.6) brightness(1.2); } 60% { opacity: 1; } to { opacity: 1; filter: none; } }
+@keyframes ft-template-draw { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+.readouts svg.readout-tick { width: 14px; height: 12px; flex: none; }
+@media (prefers-reduced-motion: reduce) {
+  .crop-host[data-arrival="true"] .ref-print, .crop-host[data-arrival="true"] .crop svg.template { animation: ft-fade 120ms linear both; }
+}

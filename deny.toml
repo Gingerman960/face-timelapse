@@ -1,0 +1,89 @@
+# cargo-deny configuration (https://embarkstudios.github.io/cargo-deny/).
+# Run: cargo deny check            (CI: the `supply-chain` job in .github/workflows/ci.yml)
+#
+# Policy from docs/rewrite/ARCHITECTURE.md §13: permissive licences only,
+# no known vulnerabilities, crates.io as the only source. Every exception
+# below names the advisory, why it does not affect FaceTimelapse, and what
+# would let us drop it. Review them whenever Tauri or ab_glyph is upgraded.
+
+[graph]
+# The platforms we ship. Crates that only build for other targets
+# (Android, iOS, BSDs) are left out of every check.
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+]
+all-features = false
+
+[output]
+feature-depth = 1
+
+[advisories]
+# Report unmaintained and unsound crates anywhere in the graph, not only
+# direct dependencies.
+unmaintained = "all"
+unsound = "all"
+yanked = "deny"
+ignore = [
+    # glib 0.18 (Linux only: Tauri -> wry/tao/muda -> gtk 0.18). Unsound
+    # `glib::VariantStrIter`; FaceTimelapse never iterates GVariant string
+    # arrays, and the Tauri GTK stack only moves to glib >= 0.20 with its next
+    # webkit2gtk-rs major. Drop when Tauri ships gtk-rs 0.20+.
+    { id = "RUSTSEC-2024-0429", reason = "glib::VariantStrIter is never used; fixed glib needs a Tauri Linux stack upgrade" },
+    # proc-macro-error 1.0 (Linux only: glib-macros / gtk3-macros). Unmaintained
+    # build-time proc-macro helper; no runtime code. Goes away with gtk-rs 0.20.
+    { id = "RUSTSEC-2024-0370", reason = "build-time proc macro of the Linux GTK stack; no runtime exposure" },
+    # ttf-parser 0.25 (timelapse-video -> ab_glyph -> owned_ttf_parser). Unmaintained,
+    # no known vulnerability. It only ever parses the bundled, SHA-256-pinned
+    # Martian Mono font for date captions, never a user-supplied font. Replace
+    # when ab_glyph moves to a maintained parser (e.g. skrifa).
+    { id = "RUSTSEC-2026-0192", reason = "parses only the bundled caption font; no untrusted input" },
+    # zbus_names / zvariant / zvariant_derive (Linux only: tauri-plugin-opener ->
+    # zbus 5, D-Bus call to reveal exported files in the file manager). Merged
+    # into zbus and no longer released standalone; no vulnerability. Drop when
+    # tauri-plugin-opener updates zbus.
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names merged into zbus; transitive via tauri-plugin-opener, no vulnerability" },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant merged into zbus; transitive via tauri-plugin-opener, no vulnerability" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive merged into zbus; transitive via tauri-plugin-opener, no vulnerability" },
+]
+
+[licenses]
+# Every licence the shipped dependency graph needs. MIT/Apache-2.0/BSD/ISC/
+# Zlib are the ARCHITECTURE.md §13 baseline; the others are required by
+# specific crates and are compatible with distributing an MIT app:
+#   MPL-2.0      cssparser, selectors, dtoa-short, option-ext (Tauri's HTML/CSS
+#                and dirs stack; file-level copyleft, unmodified sources)
+#   Unicode-3.0  ICU4X data crates and unicode-ident (via url/idna)
+#   IJG          jpeg-encoder (Independent JPEG Group notice, permissive)
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Zlib",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "IJG",
+]
+confidence-threshold = 0.93
+
+[licenses.private]
+# Workspace crates are `publish = false`; their MIT licence is ours.
+ignore = true
+
+[bans]
+# Duplicate versions are common in the Tauri tree (windows-sys, toml,
+# hashbrown, …); report them without failing the build.
+multiple-versions = "warn"
+wildcards = "deny"
+# Workspace path dependencies carry no version requirement.
+allow-wildcard-paths = true
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

@@ -1,0 +1,299 @@
+/* Timelapse: player (frame + plate caption + filmstrip + transport), sheet view,
+   per-frame inspector, full-window viewer. */
+
+/* The timelapse never widens the window's main column from its content (QA 30: the
+   19-frame strip pushed the toolbar, strip and ribbon past a 960 px window). Its
+   width comes from the column; the strip and transport fit themselves to it. */
+.tl { position: relative; display: flex; height: 100%; contain: inline-size; }
+
+/* A viewer, not an editing console (critique round 4, P1-2): the stage, then the
+   filmstrip's slot, then the playback-only transport. The slot is the strip and a
+   12 px gap above and below it (playerLayout.ts: STRIP_H, STRIP_COLLAPSED); while
+   playing it folds to the one gap above the transport, and the stage (so the frame)
+   takes the 86 px. usePlayLayout sets [data-playing] and moves the frame and caption
+   by transform (FLIP); nothing here animates a size. */
+.player {
+  --strip-slot: calc(74px + 2 * var(--s3));
+  position: relative; flex: 1; min-width: 0; height: 100%;
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) var(--strip-slot) auto;
+  padding: var(--s2) var(--s7) var(--s3);
+}
+.player[data-playing="true"]:not(:has(.filmstrip :focus-visible)) { --strip-slot: var(--s3); }
+
+/* --stage-lead and --caption-min are also read by useStageFit, which caps the frame's
+   height (--frame-fit-h) when a narrow stage can't hold it beside the caption. The stage
+   stays a plain box (no z-index, no containment): the frame becomes the fixed
+   full-window viewer from inside it. */
+.player-stage { --stage-lead: var(--s4); --caption-min: 240px; grid-column: 1; grid-row: 1; position: relative; display: grid; grid-template-columns: minmax(var(--stage-lead), 0.5fr) auto minmax(var(--caption-min), 1fr); align-items: end; gap: var(--s8); min-height: 0; }
+/* The frame and caption sit above the strip, which slides under them as it folds away. */
+.frame { grid-column: 2; position: relative; z-index: 1; height: min(100%, var(--frame-fit-h, 100%)); aspect-ratio: var(--frame-ar, 3 / 4); min-height: 0; border-radius: var(--r-frame); box-shadow: var(--shadow-print); background: var(--sunken); overflow: hidden; }
+.frame canvas, .frame > img, .frame .frame-poster { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+.frame .anchors { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.frame .anchors circle { fill: var(--on-photo-ink); stroke: var(--on-photo-edge); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.frame svg.template { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; filter: drop-shadow(0 0 1px var(--guide-shadow)); }
+.frame svg.template * { fill: none; stroke: var(--guide); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.onion-legend { position: absolute; left: 10px; top: 10px; padding: 3px 9px; border-radius: var(--r-pill); background: var(--on-photo-shade); color: var(--on-photo-ink); font-size: var(--text-small); font-weight: var(--weight-medium); }
+.buffering { position: absolute; right: 10px; top: 10px; }
+.frame-failed { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--s5); text-align: center; font-size: var(--text-ui); color: var(--text-2); }
+
+/* The print becomes the film (critique round 4, moment 3; round 5, P1-2): the frame is
+   named by the day it shows (data-vt-print and --vt-print, base.css), never by its role,
+   so the selected Days cell of that day grows into it and back, and F lifts it to the full
+   window. A poster of the frame sits under the canvas (Player.tsx), so a transition never
+   captures sunken fill. */
+
+/* F carries the date into the full window, burned into the print like the export's
+   caption: on-photo ink with a soft shadow, at display size, tabular figures so the
+   plate holds still as the days run (critique round 5, P2-17). It reads on the brightest
+   frame (critique round 6, P2-8): regular weight over a soft on-photo scrim along the
+   print's foot (0 → 45 % over 120 px), under the date. */
+.viewer-frame::after { content: ""; position: absolute; inset: auto 0 0; height: 120px; pointer-events: none; background: var(--on-photo-scrim); }
+.frame-plate {
+  position: absolute; left: var(--s5); bottom: var(--s4); z-index: 1; pointer-events: none;
+  font-size: var(--text-display); font-weight: var(--weight-regular); letter-spacing: var(--tracking-display); line-height: var(--leading-display);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--on-photo-ink); text-shadow: var(--on-photo-glow);
+}
+
+/* The photobook plate. The column is a size container so the Look pair can drop its
+   words when the caption is at its narrowest. */
+.cap-col { grid-column: 3; align-self: end; position: relative; z-index: 1; min-width: 0; padding-bottom: 2px; container: caption / inline-size; }
+.plate-caption { display: grid; justify-items: start; min-width: 0; }
+.cap-date { font-size: var(--text-hero); font-weight: var(--weight-display); letter-spacing: var(--tracking-hero); line-height: var(--leading-hero); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cap-year { font-size: var(--text-display); font-weight: var(--weight-display); letter-spacing: var(--tracking-display); line-height: var(--leading-display); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.cap-sub { margin-top: var(--s2); font-size: var(--text-ui); color: var(--text-2); }
+/* One facts line and the fit (P1-2: five position readouts became the timecode, this
+   line and the ribbon's playhead). */
+.cap-facts { margin-top: var(--s6); padding-top: var(--s3); border-top: var(--hair) solid var(--line); display: grid; gap: var(--s1); width: min(100%, 260px); }
+.cap-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The fit, words first ("Tightly lined up · 4.6 px", critique round 5, P2-12). The line is a
+   button opening its explanation: a 24 px row target drawn to the text's own rhythm, the band
+   words underlined dotted like a glossary term. */
+.cap-fit {
+  display: flex; align-items: center; gap: 0; width: calc(100% + 2 * var(--s1)); min-height: var(--control-h-sm);
+  margin: -3px calc(-1 * var(--s1)); padding: 0 var(--s1); border: 0; border-radius: var(--r-row);
+  background: transparent; color: var(--text-2); font-size: var(--text-small); text-align: left; white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.cap-fit:hover { background: var(--hover); color: var(--text-1); }
+.cap-fit:active, .cap-fit[aria-expanded="true"] { background: var(--pressed); color: var(--text-1); }
+.cap-fit .fit-words { text-decoration: underline dotted var(--line-strong); text-underline-offset: 3px; }
+.cap-fit[data-band="loose"] .fit-words { color: var(--safelight); text-decoration-color: currentColor; }
+/* Fit scale (item 19): three bands like Review's Likeness, the pin in ink. Tight and ok
+   are quiet zones; loose is the sheet's outlier band, in safelight. */
+.fit-scale { position: relative; margin-left: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 54px; height: 4px; flex: none; }
+.fit-scale i { border-radius: 1px; background: var(--text-3); }
+.fit-scale i:nth-child(2) { background: var(--line-strong); }
+.fit-scale i:nth-child(3) { background: var(--safelight); opacity: 0.85; }
+.fit-scale b { position: absolute; top: -4px; width: 2px; height: 12px; margin-left: -1px; border-radius: 1px; background: var(--text-1); box-shadow: 0 0 0 2px var(--canvas); }
+
+/* The Look pair (Onion skin, Even light) beside the zone wedge it explains. */
+.cap-look { margin-top: var(--s5); display: grid; justify-items: start; gap: var(--s3); width: min(100%, 260px); }
+.look-pair { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.cap-evened { display: grid; gap: var(--s1); width: 100%; }
+@container caption (max-width: 259px) {
+  .look-pair .chip-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+/* Zone wedge (item 24): Z0–Z10, a hollow "from" and a solid "to" marker under it, and
+   its reading in the data font. */
+.zone { display: grid; gap: var(--s2); width: 100%; }
+.zone-wedge { position: relative; display: grid; grid-template-columns: repeat(11, 1fr); height: 8px; margin-bottom: 9px; border-radius: 1px; box-shadow: 0 0 0 var(--hair) var(--line-strong); }
+.zone-wedge i:nth-child(1) { background: var(--z0); } .zone-wedge i:nth-child(2) { background: var(--z1); } .zone-wedge i:nth-child(3) { background: var(--z2); }
+.zone-wedge i:nth-child(4) { background: var(--z3); } .zone-wedge i:nth-child(5) { background: var(--z4); } .zone-wedge i:nth-child(6) { background: var(--z5); }
+.zone-wedge i:nth-child(7) { background: var(--z6); } .zone-wedge i:nth-child(8) { background: var(--z7); } .zone-wedge i:nth-child(9) { background: var(--z8); }
+.zone-wedge i:nth-child(10) { background: var(--z9); } .zone-wedge i:nth-child(11) { background: var(--z10); }
+.zone-mark { position: absolute; top: calc(100% + 2px); width: 8px; height: 7px; margin-left: -4px; overflow: visible; }
+.zone-mark path { fill: var(--text-1); }
+.zone-mark.from path { fill: none; stroke: var(--text-2); stroke-width: 1.25; stroke-linejoin: round; }
+.zone-label { white-space: nowrap; }
+
+.aligning-note { margin-top: var(--s4); display: grid; gap: var(--s2); font-size: var(--text-ui); color: var(--text-2); max-width: 32ch; }
+.aligning-note .row { gap: var(--s2); }
+.align-failures { margin-top: var(--s4); display: grid; gap: 4px; max-width: 32ch; }
+.align-failures button { text-align: left; }
+
+/* Transport: playback only, about 360 px. */
+.transport { grid-row: 3; justify-self: center; display: flex; align-items: center; gap: 4px; padding: 5px 8px 5px 6px; border-radius: var(--r-pill); background: var(--raised); box-shadow: var(--shadow-panel), inset 0 0.5px 0 var(--glass-edge); }
+.transport[aria-disabled="true"] { opacity: 0.55; }
+.btn-play { width: 38px; height: 38px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--text-1); color: var(--canvas); transition: transform var(--dur-press); }
+.btn-play:active { transform: scale(0.94); }
+.btn-play:disabled { opacity: 0.4; }
+.btn-play .icon { width: 17px; height: 17px; }
+/* Wide enough for "10:00 / 10:00", so the capsule never changes width as the time runs. */
+.timecode { min-width: 13ch; text-align: center; font-size: var(--text-label); color: var(--text-3); padding: 0 var(--s2) 0 var(--s1); white-space: nowrap; }
+.timecode b { color: var(--text-1); font-weight: var(--weight-medium); }
+.tsep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.rate { font-family: var(--font-mono); font-stretch: 87.5%; font-size: var(--text-label); color: var(--text-2); min-width: 26px; text-align: center; }
+.pace-chip .icon { width: 12px; height: 12px; }
+
+/* Split chips: a toggle and its settings caret share one capsule, split by a hairline.
+   The toggle takes the app's one pressed style (ui.css: the lit fill and a 1 px ink ring),
+   so the play disc and the Export plate stay the only solid ink (P2-11, critique round 3). */
+.split-chip { display: inline-flex; align-items: center; border-radius: var(--r-pill); box-shadow: inset 0 0 0 var(--hair) var(--line-strong); transition: background-color var(--dur-fast); }
+.split-chip[data-on="true"] { background: var(--pressed-fill); box-shadow: inset 0 0 0 1px var(--pressed-ring), var(--shadow-control); }
+.split-chip[data-on="true"] > .chip .icon { color: var(--text-1); }
+.split-chip > .chip, .split-chip > .chip[aria-pressed="true"] { position: relative; background: transparent; box-shadow: none; border-radius: var(--r-pill) 0 0 var(--r-pill); padding-right: 7px; }
+.split-chip > .chip:hover:not(:disabled) { background: var(--hover); }
+.split-chip > .chip:active:not(:disabled) { background: var(--pressed); }
+.split-chip > .split-caret { position: relative; width: 24px; height: 26px; border-radius: 0 var(--r-pill) var(--r-pill) 0; padding-right: 2px; }
+.split-chip > .split-caret::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: var(--hair); background: var(--line-strong); }
+.split-chip > .split-caret[aria-expanded="true"] { color: var(--text-1); background: var(--pressed); }
+.split-chip > .split-caret .icon { width: 12px; height: 12px; }
+.split-chip > :focus-visible { outline-offset: -2px; }
+
+/* The transport and filmstrip centre on the frame (its axis from usePlayerFit), as far
+   as the column allows, instead of on the column. While the frame travels to its playing
+   size, the transport eases to the new axis with it. */
+.player[data-axis="frame"] > :is(.transport, .filmstrip) { justify-self: start; translate: clamp(0px, calc(var(--frame-cx) - 50%), calc(var(--col-w) - 100%)) 0; }
+/* The transport's transition is two parts, so lights-out's fade and this move compose. */
+.player > .transport { --move: translate 0s; --fade: opacity 0s; transition: var(--fade), var(--move); }
+.player[data-flipping] > .transport { --move: translate var(--dur-slow) var(--ease-sheet); }
+.range-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; }
+.range-row input[type="range"] { width: 100%; accent-color: var(--text-1); }
+
+/* Filmstrip: in the stage's row and its own, at the bottom of its slot. While playing it
+   fades out (opacity only, --dur-base) and slides under the growing frame; it comes back
+   once the frame has started to settle. Keyboard focus inside it keeps it out. */
+.filmstrip {
+  --latent: color-mix(in oklch, var(--rebate), var(--z10) 12%);
+  grid-column: 1; grid-row: 1 / 3; align-self: end; margin-bottom: var(--s3); position: relative;
+  justify-self: center; display: flex; align-items: flex-end; gap: 3px; width: max-content; max-width: 100%; height: 74px; padding: 15px 3px 3px; overflow: hidden; background: var(--rebate); border-radius: var(--r-frame);
+  /* A strip of film lying on the table, like the print above it (critique round 5, P2-18). */
+  box-shadow: var(--shadow-print);
+  transition: opacity var(--dur-base) var(--ease-out) var(--dur-xfade), visibility 0s;
+}
+.player[data-playing="true"]:not(:has(.filmstrip :focus-visible)) > .filmstrip { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--dur-base) var(--ease-in), visibility 0s var(--dur-base); }
+.film { position: relative; flex: none; height: 100%; aspect-ratio: var(--frame-ar, 3 / 4); padding: 0; border: 0; background: color-mix(in oklch, var(--rebate), var(--z10) 4%); }
+.film img { width: 100%; height: 100%; object-fit: cover; border-radius: 1px; }
+.film .edge { position: absolute; left: 1px; top: -13px; }
+/* A bare "0002" (25 px) fits every film cell, a 9:16 one (31 px) too, so it is never clipped;
+   the playhead frame's "▸ 0002" (38 px) runs into the 6 px margin it has on each side (QA batch 9). */
+.film .edge { max-width: none; }
+.film.now { margin: 0 6px; }
+.film.now img { box-shadow: 0 0 0 1.5px var(--rebate), 0 0 0 3px var(--cursor); }
+.film.now .edge { color: var(--z8); }
+/* One tab stop (roving): its ring is inset in the rebate's ink, so the strip's clip never cuts it. */
+.film:focus-visible { outline-offset: -2px; }
+/* Develop-in on the aligning strip (item 13): the scan sheet's model, a frame's image
+   surfacing by opacity over the latent rebate tone, never out of a canvas-coloured slab. */
+.film[data-develop] { background: var(--latent); }
+.film[data-develop] img { animation: ft-film-surface var(--dur-develop) var(--ease-out) both; animation-delay: var(--d, 0ms); }
+@keyframes ft-film-surface { from { opacity: 0; } }
+
+/* Lights-out playback (critique round 4, signature moment 1). While playing and still,
+   html[data-lights="out"] (useLightsOut) dims the room around the frame to 8 %: the
+   sidebar, the toolbar, the transport, the caption's facts and Look pair, the inspector
+   and the ribbon, all but its playhead. The frame, the hero date counting forward and
+   the ribbon playhead stay. Opacity only, pointer events stay on, so a move brings it
+   back; a region holding keyboard focus never dims. Dims over --dur-slow, comes back
+   over --dur-base; reduced motion collapses both to 120 ms (tokens.css). The ribbon
+   (owned by the shell) dims child by child around its cursors: a parent's opacity
+   would take the playhead with it. */
+:root[data-lights] :is(.sidebar, .toolbar, .tl > .inspector, .plate-caption > :not(.cap-date, .cap-year), .cap-col > .align-failures),
+:root[data-lights] .ribbon > :not(.ribbon-cursor, :has(.ribbon-cursor), input),
+:root[data-lights] .ribbon :has(.ribbon-cursor) > :not(.ribbon-cursor, :has(.ribbon-cursor), input) {
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+:root[data-lights="out"] :is(.sidebar, .toolbar, .tl > .inspector, .player > .transport, .plate-caption > :not(.cap-date, .cap-year), .cap-col > .align-failures):not(:has(:focus-visible)),
+:root[data-lights="out"] .ribbon:not(:has(:focus-visible)) > :not(.ribbon-cursor, :has(.ribbon-cursor), input),
+:root[data-lights="out"] .ribbon:not(:has(:focus-visible)) :has(.ribbon-cursor) > :not(.ribbon-cursor, :has(.ribbon-cursor), input) {
+  opacity: 0.08;
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}
+/* The transport composes its fade with the FLIP's move (see above). */
+:root[data-lights] .player > .transport { --fade: opacity var(--dur-base) var(--ease-out); transition: var(--fade), var(--move); }
+:root[data-lights="out"] .player > .transport:not(:has(:focus-visible)) { --fade: opacity var(--dur-slow) var(--ease-standard); transition: var(--fade), var(--move); }
+
+/* Lights-out in the light theme (critique round 5, P1-8): the chrome alone faded and the
+   table stayed lit, so a white surround made skin read darker. The table switches off
+   too: a fixed scrim fades the room to Z1 at 92 % (opacity, --dur-slow) and lifts on wake
+   (--dur-base). In the darkroom there is no table to switch off (--table-off: 0), so dark
+   behaves as before. The frame, the plate (whose hero date and year stay lit) and the
+   ribbon's playhead sit above the scrim, and their ink turns to the darkroom's as the
+   room passes mid-grey (about a fifth of the way into the fade, --lit-flip); in dark
+   that ink is the ink they already have. */
+:root, :root[data-theme="dark"] { --table-off: 0; --above-dim: 0.08; }
+:root[data-theme="light"] { --table-off: 0.92; --above-dim: 0; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --table-off: 0.92; --above-dim: 0; }
+}
+/* The plate's other parts sit above the scrim with the date: at 8 % their pill outlines and the
+   rule under the date still showed through it in light (critique round 6, P2-6), so over the
+   switched-off table they go out entirely (--above-dim); in dark they keep the room's 8 %. */
+:root[data-lights="out"] :is(.plate-caption > :not(.cap-date, .cap-year), .cap-col > .align-failures):not(:has(:focus-visible)) { opacity: var(--above-dim); }
+/* One playhead mark stays lit: the focus track's; the decade track's gives way to it. */
+:root[data-lights="out"] .ribbon:not(:has(:focus-visible)):has(.ribbon-focus .ribbon-cursor) .ribbon-decade .ribbon-cursor { opacity: 0; }
+:root { --lit-z: 6; --lit-ink: var(--z9); --lit-ink-2: var(--z7); --lit-flip: calc(var(--dur-slow) * 0.2); }
+/* Over the sidebar (5) and the toolbar (3). The scrim is level with the lit layers and
+   first in the player, so the frame, the plate and the playhead, later in the document,
+   paint over it, and so does the ribbon's loupe (6), which still rises over the frame. */
+.lights-scrim { position: fixed; inset: 0; z-index: var(--lit-z); pointer-events: none; background: var(--z1); opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
+:root[data-lights="out"] .lights-scrim { opacity: var(--table-off); transition: opacity var(--dur-slow) var(--ease-standard); }
+:root[data-lights] :is(.player .frame:not(.viewer-frame), .cap-col, .ribbon-cursor) { z-index: var(--lit-z); }
+:root[data-lights] :is(.cap-date, .cap-year) { transition: color 0s; }
+:root[data-lights="out"] .cap-date { color: var(--lit-ink); transition: color 0s linear var(--lit-flip); }
+:root[data-lights="out"] .cap-year { color: var(--lit-ink-2); transition: color 0s linear var(--lit-flip); }
+:root[data-lights] .ribbon-cursor { transition: background-color 0s; }
+:root[data-lights="out"] .ribbon-cursor { --cursor: var(--lit-ink); transition: background-color 0s linear var(--lit-flip); }
+/* A region holding keyboard focus never dims: one with its own surface rises above the
+   scrim; the toolbar and the plate sit on the table itself, so focus there keeps the
+   table lit (their ink is the light table's). */
+:root[data-lights="out"] :is(.sidebar, .tl > .inspector, .player > .transport, .player > .filmstrip, .ribbon):has(:focus-visible) { z-index: calc(var(--lit-z) + 1); }
+:root[data-lights="out"]:has(:is(.toolbar, .cap-col) :focus-visible) .lights-scrim { opacity: 0; }
+
+/* The ribbon's top hairline (its own border, owned by the shell) dims with the rest:
+   a 1 px cover of the canvas over it, from the timelapse's side (critique round 5, P2-17). */
+:root[data-lights] .tl::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 1px; z-index: 1; pointer-events: none;
+  background: var(--canvas); opacity: 0; transition: opacity var(--dur-base) var(--ease-out);
+}
+:root[data-lights="out"] .tl::after { opacity: 0.92; transition: opacity var(--dur-slow) var(--ease-standard); }
+
+/* The pointer hides after 2 s of stillness in lights-out and comes back on a move
+   (useLightsOut sets html[data-pointer], critique round 5, P2-17). */
+:root[data-pointer="hidden"], :root[data-pointer="hidden"] * { cursor: none; }
+
+.frame-sheet { flex: 1; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.frame-sheet .sheet-bar { display: flex; align-items: center; gap: var(--s4); padding: 0 var(--s7) var(--s3); }
+.frame-sheet .sheet-bar .mono-meta { color: var(--text-3); }
+.grid-scroll { overflow: auto; padding: var(--s3) var(--s7) var(--s6); contain: strict; }
+.grid-rows { position: relative; width: 100%; }
+.grid-row { position: absolute; left: 0; right: 0; display: grid; gap: 3px; padding: 15px 3px 3px; background: var(--rebate); border-radius: 1.5px; }
+.grid-cell { position: relative; aspect-ratio: var(--frame-ar, 3 / 4); padding: 0; border: 0; background: color-mix(in oklch, var(--rebate), var(--z10) 4%); }
+.grid-cell img { width: 100%; height: 100%; object-fit: cover; }
+.grid-cell .edge { position: absolute; left: 1px; top: -13px; }
+.grid-cell.outlier::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1.5px var(--safelight); z-index: 1; pointer-events: none; }
+.grid-cell.outlier::after { content: ""; position: absolute; right: 0; top: 0; width: 9px; height: 9px; background: linear-gradient(to bottom left, var(--safelight) 50%, transparent 50%); z-index: 1; }
+.grid-cell[aria-current="true"] { outline: 2px solid var(--cursor); outline-offset: 1px; z-index: 2; }
+
+.nudge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2) var(--s3); }
+.nudge-field { display: grid; gap: 4px; font-size: var(--text-small); color: var(--text-2); }
+.nudge-field .num { display: flex; width: 100%; }
+.nudge-field .num input { flex: 1; min-width: 0; width: 0; }
+
+/* The full-window viewer: the backdrop the frame is lifted over. It takes focus (a dialog
+   the size of the window needs no ring), and in lights-out its table goes dark like the
+   room's (critique round 5, P1-8, P2-17). */
+.viewer { position: fixed; inset: 0; z-index: 50; background: var(--canvas); display: grid; place-items: center; animation: ft-fade var(--dur-base) both; }
+.viewer:focus-visible { outline: none; }
+.viewer::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: var(--z1); opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
+:root[data-lights="out"] .viewer::before { opacity: var(--table-off); transition: opacity var(--dur-slow) var(--ease-standard); }
+
+@media (max-width: 1180px) {
+  .player { padding: var(--s2) var(--s5) var(--s3); }
+  .player-stage { --stage-lead: 0px; --caption-min: 200px; grid-template-columns: 0 auto minmax(var(--caption-min), 1fr); gap: var(--s6); }
+  .cap-date { font-size: calc(var(--text-hero) * 0.74); }
+  .cap-year { font-size: calc(var(--text-display) * 0.8); }
+  .grid-scroll { padding: var(--s3) var(--s5) var(--s5); }
+  .frame-sheet .sheet-bar { padding: 0 var(--s5) var(--s3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film[data-develop] img { animation-delay: 0ms; }
+}
+
+.frame.viewer-frame { position: fixed; z-index: 51; inset: 32px 0 72px; margin: auto; height: calc(100dvh - 104px); width: auto; box-shadow: var(--shadow-sheet); }
+
+/* The face models are missing (QA): why the nudge fields are off, above them. */
+.nudge-off { margin: 0 0 var(--s3); font-size: var(--text-small); line-height: var(--leading-prose); color: var(--text-2); }

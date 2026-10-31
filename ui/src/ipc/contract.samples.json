@@ -1,0 +1,1347 @@
+{
+  "ActiveJob": {
+    "jobId": "job-2",
+    "kind": "align"
+  },
+  "AlignEvent_cancelled": {
+    "done": 1204,
+    "jobId": "job-2",
+    "type": "cancelled"
+  },
+  "AlignEvent_failed": {
+    "error": {
+      "kind": "noFaceInReference",
+      "message": "No face found inside the crop. Widen the crop or pick another reference photo."
+    },
+    "jobId": "job-2",
+    "type": "failed"
+  },
+  "AlignEvent_finished": {
+    "durationMs": 28140,
+    "failed": [
+      {
+        "error": {
+          "kind": "decodeFailed",
+          "message": "Couldn't read IMG_2014.jpg."
+        },
+        "photoId": "fedcba9876543210"
+      }
+    ],
+    "jobId": "job-2",
+    "outputSize": {
+      "height": 1080,
+      "width": 1080
+    },
+    "rendered": 1802,
+    "reused": 1200,
+    "total": 3004,
+    "type": "finished"
+  },
+  "AlignEvent_progress": {
+    "currentPhotoId": "0123456789abcdef",
+    "done": 1500,
+    "etaMs": 23300,
+    "failed": 2,
+    "framesPerSecond": 64.5,
+    "jobId": "job-2",
+    "recent": [
+      {
+        "dayKey": "2014-08-15",
+        "id": "0123456789abcdef",
+        "version": "5d0c9e8b1a2f"
+      }
+    ],
+    "reused": 1200,
+    "total": 3004,
+    "type": "progress"
+  },
+  "AlignEvent_started": {
+    "jobId": "job-2",
+    "total": 3004,
+    "type": "started"
+  },
+  "AlignFailure": {
+    "error": {
+      "kind": "decodeFailed",
+      "message": "Couldn't read IMG_2014.jpg."
+    },
+    "photoId": "fedcba9876543210"
+  },
+  "AlignProgress": {
+    "currentPhotoId": "0123456789abcdef",
+    "done": 1500,
+    "etaMs": 23300,
+    "failed": 2,
+    "framesPerSecond": 64.5,
+    "jobId": "job-2",
+    "recent": [
+      {
+        "dayKey": "2014-08-15",
+        "id": "0123456789abcdef",
+        "version": "5d0c9e8b1a2f"
+      }
+    ],
+    "reused": 1200,
+    "total": 3004
+  },
+  "AlignRecent": {
+    "dayKey": "2014-08-15",
+    "id": "0123456789abcdef",
+    "version": "5d0c9e8b1a2f"
+  },
+  "AlignSummary": {
+    "durationMs": 28140,
+    "failed": [
+      {
+        "error": {
+          "kind": "decodeFailed",
+          "message": "Couldn't read IMG_2014.jpg."
+        },
+        "photoId": "fedcba9876543210"
+      }
+    ],
+    "jobId": "job-2",
+    "outputSize": {
+      "height": 1080,
+      "width": 1080
+    },
+    "rendered": 1802,
+    "reused": 1200,
+    "total": 3004
+  },
+  "AppInfo": {
+    "cacheDir": "/Users/me/Library/Caches/io.github.gingerman960.facetimelapse/v1",
+    "dataDir": "/Users/me/Library/Application Support/io.github.gingerman960.facetimelapse",
+    "imageBaseUrl": "ftimg://localhost/",
+    "modelsError": null,
+    "modelsReady": true,
+    "parallelism": 15,
+    "platform": "macos",
+    "version": "2.0.0"
+  },
+  "AppInfo_modelsFailed": {
+    "cacheDir": "/Users/me/Library/Caches/io.github.gingerman960.facetimelapse/v1",
+    "dataDir": "/Users/me/Library/Application Support/io.github.gingerman960.facetimelapse",
+    "imageBaseUrl": "ftimg://localhost/",
+    "modelsError": "The face models couldn't be loaded. Reinstall FaceTimelapse.",
+    "modelsReady": false,
+    "parallelism": 15,
+    "platform": "macos",
+    "version": "2.0.0"
+  },
+  "AspectPreset_all": [
+    "free",
+    "1:1",
+    "4:3",
+    "3:4",
+    "4:5",
+    "16:9",
+    "9:16"
+  ],
+  "BackdropMode_all": [
+    "dimmed",
+    "blurred",
+    "black",
+    "extended"
+  ],
+  "CacheScope_all": [
+    "folder",
+    "all"
+  ],
+  "CaptionOptions": {
+    "format": "%b %-d, %Y",
+    "position": "bottomLeft",
+    "size": 0.045
+  },
+  "CaptionPosition_all": [
+    "topLeft",
+    "topCenter",
+    "topRight",
+    "bottomLeft",
+    "bottomCenter",
+    "bottomRight"
+  ],
+  "ClearCacheResult": {
+    "freedBytes": 3145728,
+    "removedEntries": 3590
+  },
+  "Crossfade": {
+    "easing": "easeInOut",
+    "frames": 2
+  },
+  "DateSource_all": [
+    "exif",
+    "filename",
+    "fileTime",
+    "manual"
+  ],
+  "DayGroup": {
+    "autoSelectedId": "0123456789abcdef",
+    "dayKey": "2014-08-15",
+    "excluded": false,
+    "manualSelection": true,
+    "photoIds": [
+      "0123456789abcdef",
+      "fedcba9876543210"
+    ],
+    "selectedId": "fedcba9876543210"
+  },
+  "DaysPatch": {
+    "removed": [
+      "2014-08-16"
+    ],
+    "upserted": [
+      {
+        "autoSelectedId": "0123456789abcdef",
+        "dayKey": "2014-08-15",
+        "excluded": false,
+        "manualSelection": true,
+        "photoIds": [
+          "0123456789abcdef",
+          "fedcba9876543210"
+        ],
+        "selectedId": "fedcba9876543210"
+      }
+    ]
+  },
+  "Easing_all": [
+    "linear",
+    "easeInOut"
+  ],
+  "ErrorKind_all": [
+    "noFaceInReference",
+    "noFaceDetected",
+    "notFound",
+    "invalidArgument",
+    "unsupportedFormat",
+    "decodeFailed",
+    "permissionDenied",
+    "diskFull",
+    "io",
+    "busy",
+    "cancelled",
+    "notReady",
+    "modelUnavailable",
+    "encodeFailed",
+    "internal"
+  ],
+  "ExportImagesEvent_cancelled": {
+    "done": 120,
+    "jobId": "job-3",
+    "type": "cancelled"
+  },
+  "ExportImagesEvent_failed": {
+    "error": {
+      "kind": "diskFull",
+      "message": "The disk is full. Free some space and try again."
+    },
+    "jobId": "job-3",
+    "type": "failed"
+  },
+  "ExportImagesEvent_finished": {
+    "dir": "/Users/me/Desktop/aligned",
+    "durationMs": 51000,
+    "jobId": "job-3",
+    "renamed": 2,
+    "type": "finished",
+    "written": 3004
+  },
+  "ExportImagesEvent_progress": {
+    "currentFile": "20140815.jpg",
+    "done": 120,
+    "etaMs": 48000,
+    "jobId": "job-3",
+    "total": 3004,
+    "type": "progress"
+  },
+  "ExportImagesEvent_started": {
+    "jobId": "job-3",
+    "total": 3004,
+    "type": "started"
+  },
+  "ExportImagesSummary": {
+    "dir": "/Users/me/Desktop/aligned",
+    "durationMs": 51000,
+    "jobId": "job-3",
+    "renamed": 2,
+    "written": 3004
+  },
+  "ExportProgress": {
+    "currentFile": "20140815.jpg",
+    "done": 120,
+    "etaMs": 48000,
+    "jobId": "job-3",
+    "total": 3004
+  },
+  "ExportVideoEvent_cancelled": {
+    "done": 1500,
+    "jobId": "job-4",
+    "type": "cancelled"
+  },
+  "ExportVideoEvent_failed": {
+    "error": {
+      "kind": "encodeFailed",
+      "message": "The video couldn't be encoded. Try a lower resolution or quality."
+    },
+    "jobId": "job-4",
+    "type": "failed"
+  },
+  "ExportVideoEvent_finished": {
+    "bytes": 412345678,
+    "durationSecs": 300.7,
+    "elapsedMs": 34000,
+    "frames": 3007,
+    "jobId": "job-4",
+    "path": "/Users/me/Movies/FaceTimelapse 2012–2022.mp4",
+    "type": "finished"
+  },
+  "ExportVideoEvent_progress": {
+    "encodeFps": 88.5,
+    "etaMs": 17000,
+    "framesDone": 1500,
+    "framesTotal": 3007,
+    "jobId": "job-4",
+    "type": "progress"
+  },
+  "ExportVideoEvent_started": {
+    "jobId": "job-4",
+    "total": 3007,
+    "type": "started"
+  },
+  "FaceGeometry": {
+    "anchors": [
+      {
+        "x": 0.38,
+        "y": 0.42
+      },
+      {
+        "x": 0.62,
+        "y": 0.42
+      },
+      {
+        "x": 0.5,
+        "y": 0.55
+      },
+      {
+        "x": 0.41,
+        "y": 0.68
+      },
+      {
+        "x": 0.59,
+        "y": 0.68
+      }
+    ],
+    "bounds": {
+      "height": 0.5,
+      "width": 0.4,
+      "x": 0.3,
+      "y": 0.25
+    },
+    "confidence": 0.98
+  },
+  "FolderInfo": {
+    "analyzedCount": 3590,
+    "imageCount": 3593,
+    "name": "selfies",
+    "path": "/Users/me/Pictures/selfies",
+    "unsupportedCount": 3
+  },
+  "FrameAdjust": {
+    "dx": 0.01,
+    "dy": -0.02,
+    "rotationDeg": 0.5,
+    "scale": 1.05
+  },
+  "FrameSummary": {
+    "adjust": {
+      "dx": 0.01,
+      "dy": -0.02,
+      "rotationDeg": 0.5,
+      "scale": 1.05
+    },
+    "dayKey": "2014-08-15",
+    "lookDelta": {
+      "colorShift": 1.5,
+      "exposureEv": 0.25
+    },
+    "photoId": "0123456789abcdef",
+    "residualPx": 1.75,
+    "takenAt": "2014-08-15T14:23:26",
+    "timeKnown": true,
+    "version": "5d0c9e8b1a2f"
+  },
+  "FrameSummary_lookOff": {
+    "adjust": {
+      "dx": 0.0,
+      "dy": 0.0,
+      "rotationDeg": 0.0,
+      "scale": 1.0
+    },
+    "dayKey": "2014-08-15",
+    "lookDelta": null,
+    "photoId": "0123456789abcdef",
+    "residualPx": 1.75,
+    "takenAt": "2014-08-15T14:23:26",
+    "timeKnown": true,
+    "version": "5d0c9e8b1a2f"
+  },
+  "FramesInfo": {
+    "count": 3004,
+    "expected": 3004,
+    "outputSize": {
+      "height": 1080,
+      "width": 1080
+    },
+    "status": "complete"
+  },
+  "FramesStatus_all": [
+    "none",
+    "stale",
+    "partial",
+    "complete"
+  ],
+  "FramesView": {
+    "frames": [
+      {
+        "adjust": {
+          "dx": 0.01,
+          "dy": -0.02,
+          "rotationDeg": 0.5,
+          "scale": 1.05
+        },
+        "dayKey": "2014-08-15",
+        "lookDelta": {
+          "colorShift": 1.5,
+          "exposureEv": 0.25
+        },
+        "photoId": "0123456789abcdef",
+        "residualPx": 1.75,
+        "takenAt": "2014-08-15T14:23:26",
+        "timeKnown": true,
+        "version": "5d0c9e8b1a2f"
+      }
+    ],
+    "look": {
+      "normalize": "exposureAndColor",
+      "strength": 0.7
+    },
+    "outputSize": {
+      "height": 1080,
+      "width": 1080
+    },
+    "referenceAnchors": [
+      {
+        "x": 0.38,
+        "y": 0.42
+      },
+      {
+        "x": 0.62,
+        "y": 0.42
+      },
+      {
+        "x": 0.5,
+        "y": 0.55
+      },
+      {
+        "x": 0.41,
+        "y": 0.68
+      },
+      {
+        "x": 0.59,
+        "y": 0.68
+      }
+    ],
+    "render": {
+      "backdrop": "extended",
+      "refineLandmarks": true,
+      "resolution": "1080p"
+    },
+    "status": "partial"
+  },
+  "FramesView_empty": {
+    "frames": [],
+    "look": {
+      "normalize": "off",
+      "strength": 0.7
+    },
+    "outputSize": null,
+    "referenceAnchors": null,
+    "render": {
+      "backdrop": "extended",
+      "refineLandmarks": true,
+      "resolution": "1080p"
+    },
+    "status": "none"
+  },
+  "ImageExportSettings": {
+    "format": "jpeg",
+    "jpegQuality": 92,
+    "overwrite": false
+  },
+  "ImageFormat_all": [
+    "png",
+    "jpeg"
+  ],
+  "IpcError": {
+    "kind": "noFaceInReference",
+    "message": "No face found inside the crop. Widen the crop or pick another reference photo."
+  },
+  "JobCancelled": {
+    "done": 1204,
+    "jobId": "job-1"
+  },
+  "JobFailed": {
+    "error": {
+      "kind": "noFaceInReference",
+      "message": "No face found inside the crop. Widen the crop or pick another reference photo."
+    },
+    "jobId": "job-1"
+  },
+  "JobKind_all": [
+    "scan",
+    "align",
+    "exportImages",
+    "exportVideo"
+  ],
+  "JobStarted": {
+    "jobId": "job-1",
+    "total": 3593
+  },
+  "LibraryCounts": {
+    "activeDays": 3004,
+    "confirmed": 3402,
+    "days": 3012,
+    "failed": 5,
+    "included": 3451,
+    "noFace": 35,
+    "rejected": 87,
+    "reviewPending": 12,
+    "total": 3590,
+    "uncertain": 61
+  },
+  "LookDelta": {
+    "colorShift": 1.5,
+    "exposureEv": 0.25
+  },
+  "LookSettings": {
+    "normalize": "exposureAndColor",
+    "strength": 0.7
+  },
+  "MatchStatus_all": [
+    "confirmed",
+    "uncertain",
+    "rejected",
+    "noFace",
+    "failed"
+  ],
+  "NormalizeMode_all": [
+    "off",
+    "exposure",
+    "exposureAndColor"
+  ],
+  "Pace_all": [
+    {
+      "fps": 29.97,
+      "mode": "fps"
+    },
+    {
+      "mode": "duration",
+      "seconds": 120.0
+    }
+  ],
+  "PhotoDetail": {
+    "faces": [
+      {
+        "anchors": [
+          {
+            "x": 0.38,
+            "y": 0.42
+          },
+          {
+            "x": 0.62,
+            "y": 0.42
+          },
+          {
+            "x": 0.5,
+            "y": 0.55
+          },
+          {
+            "x": 0.41,
+            "y": 0.68
+          },
+          {
+            "x": 0.59,
+            "y": 0.68
+          }
+        ],
+        "bounds": {
+          "height": 0.5,
+          "width": 0.4,
+          "x": 0.3,
+          "y": 0.25
+        },
+        "confidence": 0.98
+      }
+    ],
+    "matchedFace": 0,
+    "path": "/Users/me/Pictures/selfies/2014/IMG_20140815_142326.jpg",
+    "previewVersion": "3fa85f64c2b1",
+    "rawSimilarity": 0.71,
+    "summary": {
+      "dateSource": "exif",
+      "dayKey": "2014-08-15",
+      "faceBox": {
+        "height": 0.5,
+        "width": 0.4,
+        "x": 0.3,
+        "y": 0.25
+      },
+      "fileName": "IMG_20140815_142326.jpg",
+      "id": "0123456789abcdef",
+      "included": true,
+      "relPath": "2014/IMG_20140815_142326.jpg",
+      "review": "pending",
+      "score": 0.87,
+      "size": {
+        "height": 2448,
+        "width": 3264
+      },
+      "status": "confirmed",
+      "takenAt": "2014-08-15T14:23:26",
+      "timeKnown": true,
+      "version": "9c2e41aa"
+    }
+  },
+  "PhotoDetail_noFace": {
+    "faces": [],
+    "matchedFace": null,
+    "path": "/Users/me/Pictures/selfies/2022/IMG_20220827.jpg",
+    "previewVersion": null,
+    "rawSimilarity": null,
+    "summary": {
+      "dateSource": "filename",
+      "dayKey": "2022-08-27",
+      "faceBox": null,
+      "fileName": "IMG_20220827.jpg",
+      "id": "0123456789abcdef",
+      "included": false,
+      "relPath": "2022/IMG_20220827.jpg",
+      "review": "pending",
+      "score": 0.0,
+      "size": {
+        "height": 2448,
+        "width": 3264
+      },
+      "status": "noFace",
+      "takenAt": "2022-08-27T00:00:00",
+      "timeKnown": false,
+      "version": "9c2e41aa"
+    }
+  },
+  "PhotoQuery": {
+    "statuses": [
+      "uncertain",
+      "rejected"
+    ]
+  },
+  "PhotoQuery_unfiltered": {
+    "statuses": null
+  },
+  "PhotoSummary": {
+    "dateSource": "exif",
+    "dayKey": "2014-08-15",
+    "faceBox": {
+      "height": 0.5,
+      "width": 0.4,
+      "x": 0.3,
+      "y": 0.25
+    },
+    "fileName": "IMG_20140815_142326.jpg",
+    "id": "0123456789abcdef",
+    "included": true,
+    "relPath": "2014/IMG_20140815_142326.jpg",
+    "review": "pending",
+    "score": 0.87,
+    "size": {
+      "height": 2448,
+      "width": 3264
+    },
+    "status": "confirmed",
+    "takenAt": "2014-08-15T14:23:26",
+    "timeKnown": true,
+    "version": "9c2e41aa"
+  },
+  "PhotoSummary_noFace": {
+    "dateSource": "filename",
+    "dayKey": "2022-08-27",
+    "faceBox": null,
+    "fileName": "IMG_20220827.jpg",
+    "id": "0123456789abcdef",
+    "included": false,
+    "relPath": "2022/IMG_20220827.jpg",
+    "review": "pending",
+    "score": 0.0,
+    "size": {
+      "height": 2448,
+      "width": 3264
+    },
+    "status": "noFace",
+    "takenAt": "2022-08-27T00:00:00",
+    "timeKnown": false,
+    "version": "9c2e41aa"
+  },
+  "Platform_all": [
+    "macos",
+    "windows",
+    "linux"
+  ],
+  "Point": {
+    "x": 0.5,
+    "y": 0.25
+  },
+  "Recents": {
+    "folders": [
+      "/Users/me/Pictures/selfies"
+    ],
+    "references": [
+      "/Users/me/Pictures/reference/IMG_20140815_142326.jpg"
+    ]
+  },
+  "Rect": {
+    "height": 0.5,
+    "width": 0.4,
+    "x": 0.3,
+    "y": 0.25
+  },
+  "ReferenceDetection": {
+    "anchors": [
+      {
+        "x": 0.38,
+        "y": 0.42
+      },
+      {
+        "x": 0.62,
+        "y": 0.42
+      },
+      {
+        "x": 0.5,
+        "y": 0.55
+      },
+      {
+        "x": 0.41,
+        "y": 0.68
+      },
+      {
+        "x": 0.59,
+        "y": 0.68
+      }
+    ],
+    "confidence": 0.97,
+    "faceBox": {
+      "height": 0.5,
+      "width": 0.4,
+      "x": 0.3,
+      "y": 0.25
+    }
+  },
+  "ReferenceImage": {
+    "autoRotationDeg": -1.25,
+    "face": {
+      "anchors": [
+        {
+          "x": 0.38,
+          "y": 0.42
+        },
+        {
+          "x": 0.62,
+          "y": 0.42
+        },
+        {
+          "x": 0.5,
+          "y": 0.55
+        },
+        {
+          "x": 0.41,
+          "y": 0.68
+        },
+        {
+          "x": 0.59,
+          "y": 0.68
+        }
+      ],
+      "bounds": {
+        "height": 0.5,
+        "width": 0.4,
+        "x": 0.3,
+        "y": 0.25
+      },
+      "confidence": 0.98
+    },
+    "fileName": "IMG_20140815_142326.jpg",
+    "path": "/Users/me/Pictures/reference/IMG_20140815_142326.jpg",
+    "rotationDeg": -1.5,
+    "size": {
+      "height": 2448,
+      "width": 3264
+    },
+    "version": "3f9a1c0b77d2"
+  },
+  "ReferenceState": {
+    "aspect": "1:1",
+    "crop": {
+      "height": 2448.0,
+      "width": 2448.0,
+      "x": 408.0,
+      "y": 0.0
+    },
+    "detection": {
+      "anchors": [
+        {
+          "x": 0.38,
+          "y": 0.42
+        },
+        {
+          "x": 0.62,
+          "y": 0.42
+        },
+        {
+          "x": 0.5,
+          "y": 0.55
+        },
+        {
+          "x": 0.41,
+          "y": 0.68
+        },
+        {
+          "x": 0.59,
+          "y": 0.68
+        }
+      ],
+      "confidence": 0.97,
+      "faceBox": {
+        "height": 0.5,
+        "width": 0.4,
+        "x": 0.3,
+        "y": 0.25
+      }
+    },
+    "image": {
+      "autoRotationDeg": -1.25,
+      "face": {
+        "anchors": [
+          {
+            "x": 0.38,
+            "y": 0.42
+          },
+          {
+            "x": 0.62,
+            "y": 0.42
+          },
+          {
+            "x": 0.5,
+            "y": 0.55
+          },
+          {
+            "x": 0.41,
+            "y": 0.68
+          },
+          {
+            "x": 0.59,
+            "y": 0.68
+          }
+        ],
+        "bounds": {
+          "height": 0.5,
+          "width": 0.4,
+          "x": 0.3,
+          "y": 0.25
+        },
+        "confidence": 0.98
+      },
+      "fileName": "IMG_20140815_142326.jpg",
+      "path": "/Users/me/Pictures/reference/IMG_20140815_142326.jpg",
+      "rotationDeg": -1.5,
+      "size": {
+        "height": 2448,
+        "width": 3264
+      },
+      "version": "3f9a1c0b77d2"
+    },
+    "version": "a81c55e0d913"
+  },
+  "ReferenceState_noFace": {
+    "aspect": "1:1",
+    "crop": {
+      "height": 2448.0,
+      "width": 2448.0,
+      "x": 408.0,
+      "y": 0.0
+    },
+    "detection": null,
+    "image": {
+      "autoRotationDeg": null,
+      "face": null,
+      "fileName": "IMG_20140815_142326.jpg",
+      "path": "/Users/me/Pictures/reference/IMG_20140815_142326.jpg",
+      "rotationDeg": -1.5,
+      "size": {
+        "height": 2448,
+        "width": 3264
+      },
+      "version": "3f9a1c0b77d2"
+    },
+    "version": "a81c55e0d913"
+  },
+  "RenderSettings": {
+    "backdrop": "extended",
+    "refineLandmarks": true,
+    "resolution": "1080p"
+  },
+  "Resolution_all": [
+    "source",
+    "2160p",
+    "1080p",
+    "720p"
+  ],
+  "ReviewDecision_all": [
+    "pending",
+    "confirmed",
+    "rejected"
+  ],
+  "ScanEvent_cancelled": {
+    "done": 1800,
+    "jobId": "job-1",
+    "type": "cancelled"
+  },
+  "ScanEvent_failed": {
+    "error": {
+      "kind": "modelUnavailable",
+      "message": "The face models couldn't be loaded. Reinstall FaceTimelapse."
+    },
+    "jobId": "job-1",
+    "type": "failed"
+  },
+  "ScanEvent_finished": {
+    "analyzed": 193,
+    "confirmed": 3402,
+    "durationMs": 2310,
+    "failed": 5,
+    "fromCache": 3400,
+    "jobId": "job-1",
+    "noFace": 35,
+    "rejected": 87,
+    "total": 3593,
+    "type": "finished",
+    "uncertain": 61
+  },
+  "ScanEvent_progress": {
+    "analyzed": 100,
+    "confirmed": 3320,
+    "currentFile": "IMG_20220827.jpg",
+    "done": 3500,
+    "etaMs": 765,
+    "failed": 4,
+    "fromCache": 3400,
+    "jobId": "job-1",
+    "noFace": 33,
+    "photosPerSecond": 121.5,
+    "recent": [
+      {
+        "dayKey": "2014-08-15",
+        "id": "0123456789abcdef",
+        "status": "confirmed",
+        "version": "9c2e41aa"
+      },
+      {
+        "dayKey": "2014-08-16",
+        "id": "fedcba9876543210",
+        "status": "uncertain",
+        "version": "1b7d02ff"
+      }
+    ],
+    "rejected": 85,
+    "total": 3593,
+    "type": "progress",
+    "uncertain": 58
+  },
+  "ScanEvent_started": {
+    "jobId": "job-1",
+    "total": 3593,
+    "type": "started"
+  },
+  "ScanInfo": {
+    "lastSummary": {
+      "analyzed": 193,
+      "confirmed": 3402,
+      "durationMs": 2310,
+      "failed": 5,
+      "fromCache": 3400,
+      "jobId": "job-1",
+      "noFace": 35,
+      "rejected": 87,
+      "total": 3593,
+      "uncertain": 61
+    },
+    "scannedAt": "2026-10-24T10:00:00",
+    "status": "complete"
+  },
+  "ScanProgress": {
+    "analyzed": 100,
+    "confirmed": 3320,
+    "currentFile": "IMG_20220827.jpg",
+    "done": 3500,
+    "etaMs": 765,
+    "failed": 4,
+    "fromCache": 3400,
+    "jobId": "job-1",
+    "noFace": 33,
+    "photosPerSecond": 121.5,
+    "recent": [
+      {
+        "dayKey": "2014-08-15",
+        "id": "0123456789abcdef",
+        "status": "confirmed",
+        "version": "9c2e41aa"
+      },
+      {
+        "dayKey": "2014-08-16",
+        "id": "fedcba9876543210",
+        "status": "uncertain",
+        "version": "1b7d02ff"
+      }
+    ],
+    "rejected": 85,
+    "total": 3593,
+    "uncertain": 58
+  },
+  "ScanRecent": {
+    "dayKey": "2014-08-15",
+    "id": "0123456789abcdef",
+    "status": "confirmed",
+    "version": "9c2e41aa"
+  },
+  "ScanRecentStatus_all": [
+    "confirmed",
+    "uncertain"
+  ],
+  "ScanStatus_all": [
+    "none",
+    "partial",
+    "complete"
+  ],
+  "ScanSummary": {
+    "analyzed": 193,
+    "confirmed": 3402,
+    "durationMs": 2310,
+    "failed": 5,
+    "fromCache": 3400,
+    "jobId": "job-1",
+    "noFace": 35,
+    "rejected": 87,
+    "total": 3593,
+    "uncertain": 61
+  },
+  "SessionSnapshot": {
+    "activeJob": {
+      "jobId": "job-4",
+      "kind": "exportVideo"
+    },
+    "counts": {
+      "activeDays": 3004,
+      "confirmed": 3402,
+      "days": 3012,
+      "failed": 5,
+      "included": 3451,
+      "noFace": 35,
+      "rejected": 87,
+      "reviewPending": 12,
+      "total": 3590,
+      "uncertain": 61
+    },
+    "folder": {
+      "analyzedCount": 3590,
+      "imageCount": 3593,
+      "name": "selfies",
+      "path": "/Users/me/Pictures/selfies",
+      "unsupportedCount": 3
+    },
+    "frames": {
+      "count": 3004,
+      "expected": 3004,
+      "outputSize": {
+        "height": 1080,
+        "width": 1080
+      },
+      "status": "complete"
+    },
+    "imageExport": {
+      "format": "jpeg",
+      "jpegQuality": 92,
+      "overwrite": false
+    },
+    "look": {
+      "normalize": "exposureAndColor",
+      "strength": 0.7
+    },
+    "recents": {
+      "folders": [
+        "/Users/me/Pictures/selfies"
+      ],
+      "references": [
+        "/Users/me/Pictures/reference/IMG_20140815_142326.jpg"
+      ]
+    },
+    "reference": {
+      "aspect": "1:1",
+      "crop": {
+        "height": 2448.0,
+        "width": 2448.0,
+        "x": 408.0,
+        "y": 0.0
+      },
+      "detection": {
+        "anchors": [
+          {
+            "x": 0.38,
+            "y": 0.42
+          },
+          {
+            "x": 0.62,
+            "y": 0.42
+          },
+          {
+            "x": 0.5,
+            "y": 0.55
+          },
+          {
+            "x": 0.41,
+            "y": 0.68
+          },
+          {
+            "x": 0.59,
+            "y": 0.68
+          }
+        ],
+        "confidence": 0.97,
+        "faceBox": {
+          "height": 0.5,
+          "width": 0.4,
+          "x": 0.3,
+          "y": 0.25
+        }
+      },
+      "image": {
+        "autoRotationDeg": -1.25,
+        "face": {
+          "anchors": [
+            {
+              "x": 0.38,
+              "y": 0.42
+            },
+            {
+              "x": 0.62,
+              "y": 0.42
+            },
+            {
+              "x": 0.5,
+              "y": 0.55
+            },
+            {
+              "x": 0.41,
+              "y": 0.68
+            },
+            {
+              "x": 0.59,
+              "y": 0.68
+            }
+          ],
+          "bounds": {
+            "height": 0.5,
+            "width": 0.4,
+            "x": 0.3,
+            "y": 0.25
+          },
+          "confidence": 0.98
+        },
+        "fileName": "IMG_20140815_142326.jpg",
+        "path": "/Users/me/Pictures/reference/IMG_20140815_142326.jpg",
+        "rotationDeg": -1.5,
+        "size": {
+          "height": 2448,
+          "width": 3264
+        },
+        "version": "3f9a1c0b77d2"
+      },
+      "version": "a81c55e0d913"
+    },
+    "render": {
+      "backdrop": "extended",
+      "refineLandmarks": true,
+      "resolution": "1080p"
+    },
+    "scan": {
+      "lastSummary": {
+        "analyzed": 193,
+        "confirmed": 3402,
+        "durationMs": 2310,
+        "failed": 5,
+        "fromCache": 3400,
+        "jobId": "job-1",
+        "noFace": 35,
+        "rejected": 87,
+        "total": 3593,
+        "uncertain": 61
+      },
+      "scannedAt": "2026-10-24T10:00:00",
+      "status": "complete"
+    },
+    "video": {
+      "caption": {
+        "format": "%b %-d, %Y",
+        "position": "bottomLeft",
+        "size": 0.045
+      },
+      "crossfade": {
+        "easing": "easeInOut",
+        "frames": 2
+      },
+      "holdFirstSecs": 0.0,
+      "holdLastSecs": 1.0,
+      "pace": {
+        "fps": 10.0,
+        "mode": "fps"
+      },
+      "quality": "high",
+      "resolution": "source"
+    }
+  },
+  "SessionSnapshot_empty": {
+    "activeJob": null,
+    "counts": {
+      "activeDays": 0,
+      "confirmed": 0,
+      "days": 0,
+      "failed": 0,
+      "included": 0,
+      "noFace": 0,
+      "rejected": 0,
+      "reviewPending": 0,
+      "total": 0,
+      "uncertain": 0
+    },
+    "folder": null,
+    "frames": {
+      "count": 0,
+      "expected": 0,
+      "outputSize": null,
+      "status": "none"
+    },
+    "imageExport": {
+      "format": "png",
+      "jpegQuality": 95,
+      "overwrite": false
+    },
+    "look": {
+      "normalize": "off",
+      "strength": 0.7
+    },
+    "recents": {
+      "folders": [],
+      "references": []
+    },
+    "reference": null,
+    "render": {
+      "backdrop": "extended",
+      "refineLandmarks": true,
+      "resolution": "1080p"
+    },
+    "scan": {
+      "lastSummary": null,
+      "scannedAt": null,
+      "status": "none"
+    },
+    "video": {
+      "caption": null,
+      "crossfade": {
+        "easing": "easeInOut",
+        "frames": 0
+      },
+      "holdFirstSecs": 0.0,
+      "holdLastSecs": 1.0,
+      "pace": {
+        "fps": 10.0,
+        "mode": "fps"
+      },
+      "quality": "high",
+      "resolution": "source"
+    }
+  },
+  "Size": {
+    "height": 1080,
+    "width": 1920
+  },
+  "VideoProgress": {
+    "encodeFps": 88.5,
+    "etaMs": 17000,
+    "framesDone": 1500,
+    "framesTotal": 3007,
+    "jobId": "job-4"
+  },
+  "VideoQuality_all": [
+    "low",
+    "medium",
+    "high",
+    "max",
+    {
+      "bitrate": {
+        "kbps": 8000
+      }
+    }
+  ],
+  "VideoSettings": {
+    "caption": {
+      "format": "%b %-d, %Y",
+      "position": "bottomLeft",
+      "size": 0.045
+    },
+    "crossfade": {
+      "easing": "easeInOut",
+      "frames": 2
+    },
+    "holdFirstSecs": 0.0,
+    "holdLastSecs": 1.0,
+    "pace": {
+      "fps": 10.0,
+      "mode": "fps"
+    },
+    "quality": "high",
+    "resolution": "source"
+  },
+  "VideoSettings_duration": {
+    "caption": null,
+    "crossfade": {
+      "easing": "easeInOut",
+      "frames": 2
+    },
+    "holdFirstSecs": 0.0,
+    "holdLastSecs": 1.0,
+    "pace": {
+      "mode": "duration",
+      "seconds": 60.0
+    },
+    "quality": {
+      "bitrate": {
+        "kbps": 12000
+      }
+    },
+    "resolution": "2160p"
+  },
+  "VideoSummary": {
+    "bytes": 412345678,
+    "durationSecs": 300.7,
+    "elapsedMs": 34000,
+    "frames": 3007,
+    "jobId": "job-4",
+    "path": "/Users/me/Movies/FaceTimelapse 2012–2022.mp4"
+  }
+}

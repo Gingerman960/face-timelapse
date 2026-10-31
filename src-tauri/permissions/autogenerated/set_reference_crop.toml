@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-reference-crop"
+description = "Enables the set_reference_crop command without any pre-configured scope."
+commands.allow = ["set_reference_crop"]
+
+[[permission]]
+identifier = "deny-set-reference-crop"
+description = "Denies the set_reference_crop command without any pre-configured scope."
+commands.deny = ["set_reference_crop"]

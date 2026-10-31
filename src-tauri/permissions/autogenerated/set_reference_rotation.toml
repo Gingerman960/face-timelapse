@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-reference-rotation"
+description = "Enables the set_reference_rotation command without any pre-configured scope."
+commands.allow = ["set_reference_rotation"]
+
+[[permission]]
+identifier = "deny-set-reference-rotation"
+description = "Denies the set_reference_rotation command without any pre-configured scope."
+commands.deny = ["set_reference_rotation"]

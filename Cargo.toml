@@ -1,0 +1,59 @@
+# FaceTimelapse — Cargo workspace root.
+#
+# Members:
+#   crates/face-engine     — photo discovery, decode, face detection/recognition,
+#                            scan cache, grouping, alignment, export (pure Rust)
+#   crates/timelapse-video — MP4 timelapse encoder
+#   src-tauri              — the Tauri 2 shell. Add "src-tauri" to `members` once
+#                            that crate exists (cargo rejects missing members).
+[workspace]
+resolver = "3"
+members = ["crates/*", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+authors = ["Artem Kichihin"]
+repository = "https://github.com/Gingerman960/face-timelapse"
+publish = false
+
+# Shared dependency versions. Member crates opt in with `name.workspace = true`
+# (plus any extra features they need).
+[workspace.dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["std", "serde"] }
+serde = { version = "1.0.229", features = ["derive"] }
+# `float_roundtrip`: floats read back from session.json are bit-identical to
+# what was written (the default parser can be one ULP off, which changed the
+# render fingerprint after a restart).
+serde_json = { version = "1.0.154", features = ["float_roundtrip"] }
+thiserror = "2.0.21"
+rayon = "1.12"
+fast_image_resize = "6.1"
+image = { version = "0.25.10", default-features = false }
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+tempfile = "3.27"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false
+strip = "symbols"
+
+# Benchmarks keep symbols so profiles are readable.
+[profile.bench]
+inherits = "release"
+debug = "line-tables-only"
+strip = "none"
+
+# Dependencies (image codecs, tract, resizing) are always optimized so debug
+# builds and `cargo test` run the ML/image hot paths at realistic speed.
+[profile.dev.package."*"]
+opt-level = 3
+
+# Workspace crates get light optimization in dev/test: pixel loops (warps,
+# colour conversion) are ~10x faster than at opt-level 0, debugging still works.
+[profile.dev]
+opt-level = 1

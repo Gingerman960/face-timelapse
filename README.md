@@ -1,146 +1,180 @@
-# face-timelapse
+# FaceTimelapse
 
 [![CI](https://github.com/Gingerman960/face-timelapse/actions/workflows/ci.yml/badge.svg)](https://github.com/Gingerman960/face-timelapse/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-A cross-platform desktop app that aligns a face across many photos and exports the result as a smooth timelapse video. Built with Electron + React + face-api.js.
-
-> Pick a reference photo, point it at a folder of photos, and the app finds every photo of that person, aligns their face to the reference position, and strings the result into an MP4.
+FaceTimelapse is a desktop app for people who have taken a selfie (nearly) every day for years. Pick one reference photo and a folder of thousands of photos. The app finds you in every one of them, keeps one photo per calendar day, aligns your face so the eyes, nose and mouth land on the same pixels in every frame, and plays the result back as a timelapse before it exports an MP4 or a folder of aligned frames. Everything runs on your machine: there are no accounts, no uploads and no network access. The app is built with Tauri 2: a pure-Rust engine (face detection, recognition, alignment, H.264 encoding) under a React UI.
 
 ## Features
 
-- **Reference-based matching** — geometric face embeddings (45 features from 68 landmarks) find the same person across thousands of photos, independent of lighting or color.
-- **Procrustes alignment** — translates, rotates, and scales each face so that eyes, nose, and mouth land in the same pixel positions as the reference.
-- **Soft backdrop extension** — where the aligned face doesn't cover the full output canvas, the source image is used as a darkened backdrop instead of hard black borders.
-- **Daily deduplication** — when you have multiple photos per day, the app groups them by date and picks the best match by default. Drag a photo onto another calendar day to reassign it.
-- **Parallel workers** — detection, embedding, and alignment run on a worker per CPU core.
-- **Local-first** — nothing leaves your machine. No accounts, no API calls.
-- **Video export** — configurable fps and total duration via bundled ffmpeg.
+- **Finds one person in a camera roll.** SFace face-recognition embeddings on YuNet-detected faces pick you out of group photos, and in a multi-face photo the app aligns the face that matched, not the largest one. Scores keep the familiar 0–1 scale: confident matches flow straight through, and unsure ones (sunglasses, a hard hat) go to review.
+- **Incremental scans.** Each photo is analyzed once and cached, independently of the reference. Changing the reference photo or its crop re-matches the whole library in memory without rescanning, and a rescan of an unchanged 3,600-photo library takes about 35 ms. Cancelled scans resume where they stopped.
+- **Keyboard review.** Unsure matches appear one at a time next to the reference, already aligned to it: `Y` keeps a photo, `N` leaves it out, `U` / ⌘Z undoes, Space compares, ⇧A keeps the rest. Wrongly rejected photos can be rescued from the library view.
+- **One photo per day.** A calendar where every day cell is its own photo. The best match is picked automatically; you can choose an alternate, drag a photo to another day (pointer or keyboard), add a photo to an empty day, leave a day out, or move an after-midnight selfie back to the day it belongs to. Dates come from EXIF, then from file names such as `IMG_20140815_142326.jpg`, then from the file time, and the app shows which source it used.
+- **Stable alignment.** The face is aligned with a similarity Procrustes fit on five landmarks. The landmarks are refined by re-detecting each face four times (two sizes, plain and mirrored), which halves frame-to-frame eye jitter. Per-frame nudges (offset, scale, rotation) re-render live. Output presets are 720p, 1080p and 4K, or the crop's own pixel size, and the area outside the photo can be a dimmed, blurred or black backdrop with a feathered edge.
+- **In-app player.** Play, scrub and step through the aligned timelapse at the export pace, with a decade ribbon (year and day ticks) as the scrubber, a crossfade preview, an onion skin (previous frame or the reference, adjustable opacity, difference blend) and anchor-point overlays to check the alignment. A contact-sheet view flags frames whose fit is poor.
+- **Even light.** Optional exposure and white-balance normalization matches each frame's face region to the reference (Oklab statistics, adjustable strength, A/B toggle). It is applied on read, so toggling it never re-renders the frames.
+- **Video export.** Coupled fps and duration controls, crossfades between days, date captions (format, position, size), first/last-frame holds, resolution and quality presets. Encoding uses Apple VideoToolbox (hardware) on macOS and openh264 elsewhere, with an automatic fallback, and writes a fast-start, BT.709-tagged MP4. Frames can also be exported as PNG or JPEG; existing files are never overwritten unless you ask.
+- **Drag and drop.** Drop a photo on the window to make it the reference, or a folder to make it the library.
+- **Session restore.** The app reopens where you left off: reference, crop, folder, review decisions, day picks, aligned frames and export settings, plus recent photos and folders.
+- **Every long job can be cancelled.** Scan, align and export show progress, throughput and time left; cancelling keeps the work done so far, and a cancelled video leaves no half-written file behind.
+- **Private by construction.** The app has no network client, no telemetry and no remote content; the face models and fonts ship inside the app.
 
 ## Screenshots
 
 | | |
 |:---:|:---:|
-| **Setup** — pick reference + crop | **Scanning** — parallel face detection |
-| ![Setup](./assets/screenshots/setup.png) | ![Scanning](./assets/screenshots/scanning.png) |
-| **Daily selection** — one photo per day | **Results** — aligned timelapse |
-| ![Daily selection](./assets/screenshots/daily-selection.png) | ![Results](./assets/screenshots/results.png) |
+| **Reference**: crop editor with the alignment template | **Scan**: live contact sheet while the library is read |
+| ![Reference screen](./assets/screenshots/setup.png) | ![Scan screen](./assets/screenshots/scanning.png) |
+| **Days**: a calendar of faces, one photo per day | **Timelapse**: player with filmstrip and decade ribbon |
+| ![Days screen](./assets/screenshots/daily-selection.png) | ![Timelapse screen](./assets/screenshots/results.png) |
+| **Review**: an unsure match next to the reference, on one eye line | **Light theme**: the same player on the light table |
+| ![Review screen](./assets/screenshots/review.png) | ![Timelapse screen, light theme](./assets/screenshots/results-light.png) |
 
-### Video export
+### Export
 
-![Video export modal](./assets/screenshots/video-export.png)
+![Export sheet](./assets/screenshots/video-export.png)
 
-From the Results view, **Create Video** opens a modal that turns the aligned stack into an MP4. Two sliders drive the encode — **FPS** (1–60) and **Total Duration** (1–120s) — and each one recomputes the other from the photo count, so you can dial in either "10 FPS, whatever length" or "a 30-second video, whatever framerate". A progress bar updates live while `ffmpeg` encodes, and Cancel stays disabled during the run to prevent half-written output files.
+**Export…** (`E` in the Timelapse screen) opens a sheet with a preview of the current frame and its caption. Choose Video (MP4) or Frames, the size, the pace (days per second and video length are linked; edit either one), crossfades between days, holds, quality and the date caption. The footer shows the resulting codec, size, duration and an estimated file size. While the video encodes, the sheet shows the frame being encoded and the time left, and **Show in Finder** appears when it is done.
 
-_See [`assets/screenshots/README.md`](./assets/screenshots/README.md) for how to capture + add these._
+See [`assets/screenshots/README.md`](./assets/screenshots/README.md) for how these images are captured.
 
-## Install
+## How it works
 
-Requires Node.js 18+. `@napi-rs/canvas` ships prebuilt binaries, so no system canvas deps are needed; `sharp` is a native dep that usually installs from prebuilt too, but platform build tools (Xcode CLT on macOS, MSVC Build Tools on Windows, `build-essential` on Linux) are recommended as a fallback.
+```
+Reference ──► Scan ──────────────────────► Review ──► Days ──────► Align ─────────────► Timelapse ──► Export
+crop + face   walk, date, detect, embed,    unsure     one photo   refine landmarks,     player,       H.264 MP4
+              cache, match vs reference     matches    per day     Procrustes, warp      onion skin    or PNG/JPEG
+```
+
+1. **Walk and date.** The folder is walked recursively (`.jpg .jpeg .png .tif .tiff .webp`; HEIC is counted and reported as unsupported). The capture date comes from EXIF `DateTimeOriginal`, then `DateTimeDigitized`, then the file name, then EXIF `DateTime`, then the file time, all as naive local times.
+2. **Detect.** Each photo is decoded once (EXIF orientation applied, JPEG DCT-scaled to about 640 px) and YuNet finds up to three faces with five landmarks each. On the 3,591-photo reference library, the detector found a face in **99.97 %** of the photos; the only miss is an all-black frame.
+3. **Recognize and match.** SFace turns each face into a 128-d embedding. A face matches when its cosine similarity to the reference passes OpenCV's published threshold (0.363), mapped onto the 0–1 score scale (≥ 0.60 confirmed, ≥ 0.40 unsure). On the reference library: 3,588 confirmed, 2 unsure (sunglasses, safety goggles), no false rejects, and no other person above 0.29.
+4. **Cache.** Faces, landmarks, embeddings and dates are cached per photo, keyed by path, size and modification time, so matching against a new reference or crop is an in-memory pass (0.2 ms for 3,600 photos; a crop change including re-detection takes about 130 ms).
+5. **Align.** The matched face's five landmarks are refined, then a similarity Procrustes fit (translation, rotation, uniform scale) maps them onto the reference landmarks at the output size. Eye jitter across frames is **about 2 % of the inter-pupillary distance** (4.1 % without refinement). Frames are rendered once, kept as JPEG masters keyed by a render fingerprint, and reused across restarts.
+6. **Look and encode.** The optional light correction is a per-frame 3D LUT built from Oklab statistics of the face region. The video encoder letterboxes, crossfades and captions frames in Y′CbCr, encodes H.264 High profile, and muxes a moov-first MP4 without a second pass.
+
+Measured on an Apple M3 Max (16 cores), release build, with the 3,591-photo library (8–12 MP JPEGs, 7.9 GB). Sources: [`crates/face-engine/BENCHMARKS.md`](./crates/face-engine/BENCHMARKS.md), [`crates/timelapse-video/README.md`](./crates/timelapse-video/README.md), [`docs/rewrite/INTEGRATION-NOTES.md`](./docs/rewrite/INTEGRATION-NOTES.md).
+
+| Stage | Result |
+|---|---|
+| Full scan, no cache | **≈ 170 photos/s** (168 photos/s: 3,591 photos in 21.4 s) |
+| Rescan with a valid cache | 74,000–108,000 photos/s (≈ 35 ms for the library) |
+| Align, 1460×1080 masters with landmark refinement | 93 frames/s |
+| Video, 300 real 12 MP photos → 1440×1080, crossfade + captions | **≈ 350 fps** with VideoToolbox (2.6 s), 190 fps with openh264 |
+| Video, frames already at 1080×1080, captions on | 545 fps VideoToolbox, 346 fps openh264 |
+| Peak memory, full scan + align of 3,577 days | 0.98 GB (backend) |
+| Cold start of the release app to an interactive window | ≈ 0.4 s |
+
+Face models run on [tract](https://github.com/sonos/tract), a pure-Rust ONNX runtime, so the app needs no native ML runtime, downloads nothing at build time and builds the same way on macOS, Windows and Linux. The binding design documents are in [`docs/rewrite/`](./docs/rewrite/): [`ARCHITECTURE.md`](./docs/rewrite/ARCHITECTURE.md) (IPC contract, algorithms, budgets), [`DESIGN.md`](./docs/rewrite/DESIGN.md) (the "darkroom / light table" design system), [`PRODUCT.md`](./docs/rewrite/PRODUCT.md) and [`LEGACY-SPEC.md`](./docs/rewrite/LEGACY-SPEC.md) (the behaviour of the Electron app this replaced).
+
+## Install and run
+
+Release bundles for macOS (Apple silicon and Intel, macOS 13 or later), Windows (NSIS installer) and Linux (AppImage, .deb) are published on [GitHub Releases](https://github.com/Gingerman960/face-timelapse/releases). To run from source:
+
+**Prerequisites**
+
+- Rust via [rustup](https://rustup.rs); `rust-toolchain.toml` pins the toolchain (1.99.1) and rustup installs it on first use
+- Node.js 24 LTS (22.22 or later also works) with npm
+- The platform's Tauri prerequisites: Xcode Command Line Tools on macOS; MSVC Build Tools and WebView2 on Windows; WebKitGTK 4.1 and friends on Linux. See [docs/BUILD.md](./docs/BUILD.md#prerequisites).
 
 ```bash
 git clone https://github.com/Gingerman960/face-timelapse.git
 cd face-timelapse
-npm install
-npm run download-models
+scripts/fetch-models.sh        # YuNet + SFace ONNX models into models/ (SHA-256 checked, idempotent)
+npm --prefix ui ci             # UI dependencies, including the Tauri CLI
+npm --prefix ui run app:dev    # build and launch the desktop app with hot reload
 ```
 
-`npm install` triggers `electron-rebuild` for `canvas` and `sharp` so they load in the Electron runtime. `npm run download-models` copies the face-api weights out of `node_modules/@vladmandic/face-api/model/` into `./models/` (they're bundled with the package — no network fetch).
+`app:dev` starts Vite on port 1420, compiles the Rust app in debug mode and opens the window. The first build compiles the whole dependency tree and takes a few minutes. On Windows, run `scripts/fetch-models.sh` from Git Bash.
 
-## Run in development
+### UI only, in a browser
 
 ```bash
-npm run dev
+npm --prefix ui run dev        # then open http://localhost:1420
 ```
 
-Vite serves the renderer on `http://localhost:5173` and Electron opens a window pointing at it. DevTools open automatically.
+Outside the Tauri window the UI installs an in-memory fake backend that implements every command of the IPC contract over a synthetic 3,600-photo, ten-year library (no real photos). URL parameters select a starting point: `?mock=fresh|ready|scanned|reviewed|aligned` and `&speed=instant|fast|normal`, for example <http://localhost:1420/?mock=aligned&speed=fast>. `npm --prefix ui run dev:mock` forces the fake backend even inside the Tauri window (macOS/Linux shell syntax).
 
-## Build distributables
+### Release build
 
 ```bash
-npm run build         # current platform
-npm run build:mac     # macOS DMG (x64 + arm64)
-npm run build:win     # Windows NSIS installer (x64)
+npm --prefix ui run app:build  # → target/release/bundle/ (.app + .dmg, NSIS .exe, AppImage + .deb)
 ```
 
-Output lands in `release/`. Builds are unsigned by default — see [docs/BUILD.md](./docs/BUILD.md) for Apple Developer ID notarization, Windows Authenticode, and distribution notes.
+Builds are unsigned unless signing credentials are configured. [docs/BUILD.md](./docs/BUILD.md) covers bundles, code signing and notarization, the release workflow and troubleshooting.
 
-## How alignment works
+The npm scripts `tauri`, `app:dev` and `app:build` in `ui/package.json` run the Tauri CLI (`@tauri-apps/cli` 2.12.4) from the repository root, so they work both from `ui/` (`npm run app:dev`) and from the root (`npm --prefix ui run app:dev`). Any other CLI command works the same way: `npm --prefix ui run tauri -- info`.
 
-The app ports the core algorithm from a prior Swift implementation:
+## Tests
 
-1. **Detect** the largest face in the reference image with `ssdMobilenetv1` (WASM-backed) and extract 68 landmarks with `faceLandmark68Net`.
-2. **Extract 5 alignment anchors** from the 68-point array: left eye center, right eye center, nose tip, mouth left corner, mouth right corner.
-3. **Generate a 45-feature geometric embedding** describing person-specific proportions (inter-pupillary distance normalized, eyebrow/nose/mouth/jaw ratios). Because it's pure geometry, it's invariant to lighting and color.
-4. **Scan the folder** in parallel worker threads. For each photo: detect the biggest face, embed it, compare to the reference via Gaussian-distance similarity, and categorize as confirmed / uncertain / rejected.
-5. **Compute the Procrustes transform** (translation + rotation + uniform scale) that maps each photo's 5 anchors onto the reference's, and render the aligned output at the reference's resolution.
-6. **Export** either as images (`YYYYMMDD.png` naming with collision suffixes) or as an MP4 via `ffmpeg`.
+| Layer | Command | What runs |
+|---|---|---|
+| Rust, all crates | `cargo test --workspace` | unit, synthetic-image, IPC mock and contract tests; real-photo tests skip unless `FT_PHOTOS_DIR` is set |
+| Rust lint | `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings` | |
+| Dependencies | `cargo deny check` and `npm --prefix ui audit --omit=dev --audit-level=high` | RustSec advisories, licences and sources per [`deny.toml`](./deny.toml); needs [`cargo-deny`](https://github.com/EmbarkStudios/cargo-deny) |
+| Rust coverage | `cargo llvm-cov --workspace --ignore-filename-regex '(src-tauri/src/(main\|lib)\.rs\|/benches/)' --summary-only` | needs [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) |
+| Engine throughput gates | `cargo test -p face-engine --release --test real_scan -- --ignored --nocapture` | needs `FT_PHOTOS_DIR` and `FT_REFERENCE_PHOTO` |
+| UI unit + components | `npm --prefix ui test` (`run test:coverage` for v8 coverage) | Vitest + Testing Library against the fake backend |
+| UI types and lint | `npm --prefix ui run typecheck` and `npm --prefix ui run lint` | |
+| UI end to end | `npm --prefix ui run test:e2e` | Playwright on Chromium: flows, axe accessibility checks, screenshot baselines, frame-time budgets |
+
+Run `npx playwright install chromium` in `ui/` once before the first E2E run. Real-photo tests never copy, modify or commit photos; see [CONTRIBUTING.md](./CONTRIBUTING.md) for the variables, coverage targets and the contract-change procedure.
 
 ## Project structure
 
 ```
-electron/              # Main process
-  main.js              # BrowserWindow + IPC handlers
-  preload.js           # contextBridge surface
-  services/
-    faceDetection.js   # face-api.js wrapper
-    faceEmbedding.js   # geometric 45-feature embedding + similarity
-    alignment.js       # Procrustes transform + image warp
-    photoScanner.js    # folder walk + worker pool
-    scanWorker.js      # per-photo detect + embed (worker thread)
-    alignmentWorker.js # per-photo align + write (worker thread)
-    exportService.js   # copy aligned PNGs to destination folder
-    videoExport.js     # ffmpeg concat demuxer → MP4
-
-renderer/              # React + Zustand UI
-  src/
-    App.jsx            # Top-level step routing
-    store/             # Zustand state (mirrors old Swift ViewModel)
-    views/             # One per wizard step (Setup → Results)
-    components/        # Shared UI (VideoExportModal)
-
-scripts/
-  download-models.js   # Copies face-api weights into ./models/
-
-tests/                 # Vitest — pure-logic smoke tests
+Cargo.toml                 Cargo workspace: crates/* + src-tauri
+crates/
+  face-engine/             pure Rust: walk, dates, decode, YuNet + SFace (tract), matching,
+                           analysis cache, days, Procrustes align + warp, colour look, export
+  timelapse-video/         pure Rust H.264/MP4: VideoToolbox (macOS) + openh264, crossfade, captions
+src-tauri/                 Tauri 2 shell: 29 IPC commands, job runner with cancel + progress
+                           channels, ftimg:// image protocol, session persistence
+ui/                        React 19 + TypeScript + Vite
+  src/features/            setup (Reference), scan, review, days, timelapse, export, shell
+  src/ipc/                 contract.ts (IPC types), typed client, in-memory mock backend
+  e2e/                     Playwright specs and screenshot baselines
+scripts/fetch-models.sh    downloads the ONNX models (pinned URLs + SHA-256)
+models/                    fetched models (not committed)
+docs/                      BUILD.md, rewrite/ (architecture, design, product, legacy spec)
+assets/                    icon, screenshots, social preview
 ```
 
-## Testing
+## Credits and licences
 
-```bash
-npm test
-```
+FaceTimelapse is MIT licensed. The app bundles or builds on:
 
-Current coverage is intentionally minimal (Stage A): pure-logic modules only. Native-dependent modules (face detection, workers, ffmpeg) are not unit-tested.
+| Component | Use | Licence |
+|---|---|---|
+| [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) (`face_detection_yunet_2023mar.onnx`, OpenCV Zoo) | face detection, 5 landmarks | MIT |
+| [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) (`face_recognition_sface_2021dec.onnx`, OpenCV Zoo; Zhong et al., IEEE TIP 2021) | 128-d face embeddings | Apache-2.0 |
+| [tract](https://github.com/sonos/tract) | ONNX inference in pure Rust | MIT or Apache-2.0 |
+| [OpenH264](https://github.com/cisco/openh264) via [`openh264-sys2`](https://github.com/ralfbiedert/openh264-rs), compiled from source | H.264 encoder (Windows, Linux, macOS fallback) | BSD-2-Clause |
+| Apple VideoToolbox | hardware H.264 encoder on macOS | part of macOS |
+| [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) | UI typeface | SIL OFL 1.1 |
+| [Martian Mono](https://github.com/evilmartians/mono) | data typeface and video date captions | SIL OFL 1.1 |
+| [Tauri](https://tauri.app) and its dialog, opener and window-state plugins | desktop shell | MIT or Apache-2.0 |
+| [React](https://react.dev), [Vite](https://vite.dev), [TanStack Query and Virtual](https://tanstack.com), [Zustand](https://github.com/pmndrs/zustand), [dnd-kit](https://dndkit.com), [Phosphor Icons](https://phosphoricons.com) | UI | MIT |
+| [`image`](https://github.com/image-rs/image), [`zune-jpeg`](https://github.com/etemesi254/zune-image), [`jpeg-decoder`](https://github.com/image-rs/jpeg-decoder), [`jpeg-encoder`](https://github.com/vstroebel/jpeg-encoder), [`fast_image_resize`](https://github.com/Cykooz/fast_image_resize), [`kamadak-exif`](https://github.com/kamadak/exif-rs), [`yuv`](https://github.com/awxkee/yuvutils-rs), [`ab_glyph`](https://github.com/alexheretic/ab-glyph), [`rayon`](https://github.com/rayon-rs/rayon), [`blake3`](https://github.com/BLAKE3-team/BLAKE3), [`postcard`](https://github.com/jamesmunns/postcard), [`serde`](https://serde.rs), [`chrono`](https://github.com/chronotope/chrono) | image, video and data plumbing | MIT, Apache-2.0, BSD or Zlib (see each crate) |
 
-## Faster detection (optional)
+**H.264 patents.** H.264 is patent-encumbered. Cisco pays the AVC royalties only for its prebuilt OpenH264 binary downloaded from Cisco at runtime; this app compiles OpenH264 from source, which Cisco's licence does not cover. Whoever distributes builds is responsible for any AVC patent licence their distribution needs (Via LA's AVC terms include a free tier for small volumes; check the current terms). On macOS the default encoder is the operating system's VideoToolbox, and OpenH264 only runs as a fallback; Windows and Linux builds use OpenH264. This note is not legal advice. Details: [`crates/timelapse-video/README.md`](./crates/timelapse-video/README.md#licences-and-patents).
 
-Detection runs on WASM by default — works on all three platforms with zero setup. If you want faster inference on large libraries:
-
-- **Native CPU** (macOS/Windows/Linux): `npm install --save-optional @tensorflow/tfjs-node`
-- **NVIDIA GPU** (Linux/Windows with CUDA): `npm install --save-optional @tensorflow/tfjs-node-gpu`
-
-The app auto-detects which backend is available and logs the choice at startup. See [docs/BUILD.md](./docs/BUILD.md#faster-face-detection-optional) for details. A Core ML path for macOS GPU is tracked as future work.
+The licence texts of the bundled models and fonts ship inside the app (`src-tauri/resources/licenses/`, `ui/src/assets/fonts/`, `crates/timelapse-video/assets/fonts/`).
 
 ## Roadmap
 
-- Playwright E2E for the scan → align → export happy path
-- Core ML / Apple Vision bridge for macOS GPU inference
-- Incremental/resumable scans for large libraries (partial support today via local cache)
-- Code-signing & notarization automation for macOS/Windows distribution
+- Signed and notarized macOS releases and signed Windows installers (the release workflow already accepts the credentials)
+- HEIC support through macOS ImageIO
+- GIF and WebM export
+- Auto-update (needs signed builds and an update key)
+- Smart daily pick that weighs sharpness and frontality, not only the match score
+- A "day starts at" hour for after-midnight selfies
+- Dock and taskbar progress, and a notification when a long job finishes in the background
+- Verify VideoToolbox on Intel Macs and run the full real-app smoke test on Windows and Linux
 
-PRs welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-## Credits
-
-- [@vladmandic/face-api](https://github.com/vladmandic/face-api) — MIT, provides both the detection/landmark models and the WASM runtime used in Electron
-- [TensorFlow.js](https://github.com/tensorflow/tfjs) — Apache 2.0, the runtime underlying face-api
-- [sharp](https://github.com/lovell/sharp) — Apache 2.0, fast image I/O and transforms
-- [@napi-rs/canvas](https://github.com/Brooooooklyn/canvas) — MIT, prebuilt-binary Canvas 2D used by the alignment pipeline
-- [fluent-ffmpeg](https://github.com/fluent-ffmpeg/node-fluent-ffmpeg) — MIT, wrapper around bundled `ffmpeg-static` (LGPL ffmpeg binaries)
-- [exifr](https://github.com/MikeKovarik/exifr) — MIT, EXIF parsing for photo creation dates
-- [Electron](https://www.electronjs.org/), [React](https://react.dev/), [Vite](https://vitejs.dev/), [Zustand](https://github.com/pmndrs/zustand)
+PRs are welcome; see [CONTRIBUTING.md](./CONTRIBUTING.md). The first version of this app (Electron, face-api.js) is described in [`docs/rewrite/LEGACY-SPEC.md`](./docs/rewrite/LEGACY-SPEC.md) and lives in the git history.
 
 ## License
 
-MIT © 2026 Artem Kichihin — see [LICENSE](./LICENSE).
+MIT © 2026 Artem Kichihin. See [LICENSE](./LICENSE).

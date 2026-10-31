@@ -1,0 +1,126 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "FaceTimelapse",
+  "version": "2.0.0",
+  "identifier": "io.github.gingerman960.facetimelapse",
+  "build": {
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../ui/dist",
+    "beforeDevCommand": {
+      "script": "npm run dev",
+      "cwd": "../ui",
+      "wait": false
+    },
+    "beforeBuildCommand": {
+      "script": "npm run build",
+      "cwd": "../ui",
+      "wait": true
+    }
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "FaceTimelapse",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
+        "visible": false,
+        "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 22, "y": 24 },
+        "dragDropEnabled": true,
+        "acceptFirstMouse": true,
+        "tabbingIdentifier": "facetimelapse",
+        "theme": null
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' ftimg: http://ftimg.localhost blob: data:",
+        "connect-src": "ipc: http://ipc.localhost ftimg: http://ftimg.localhost",
+        "font-src": "'self'",
+        "media-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'",
+        "frame-src": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' ftimg: http://ftimg.localhost blob: data:",
+        "connect-src": "'self' ipc: http://ipc.localhost ftimg: http://ftimg.localhost ws://localhost:1420 http://localhost:1420",
+        "font-src": "'self'",
+        "media-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'",
+        "frame-src": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "freezePrototype": true,
+      "dangerousDisableAssetCspModification": false,
+      "assetProtocol": { "enable": false },
+      "capabilities": ["main"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg", "nsis", "appimage", "deb"],
+    "publisher": "Artem Kichihin",
+    "copyright": "Copyright (c) 2026 Artem Kichihin. MIT License.",
+    "category": "Photography",
+    "shortDescription": "Align one face across thousands of daily selfies and export a timelapse.",
+    "longDescription": "FaceTimelapse finds one person in a folder of photos, aligns their face across every day and exports the result as images or an MP4 timelapse. Everything runs locally.",
+    "homepage": "https://github.com/Gingerman960/face-timelapse",
+    "license": "MIT",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../models/face_detection_yunet_2023mar.onnx": "models/face_detection_yunet_2023mar.onnx",
+      "../models/face_recognition_sface_2021dec.onnx": "models/face_recognition_sface_2021dec.onnx",
+      "resources/licenses/": "licenses/"
+    },
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "hardenedRuntime": true,
+      "infoPlist": "Info.plist",
+      "dmg": {
+        "windowSize": { "width": 660, "height": 400 },
+        "appPosition": { "x": 180, "y": 180 },
+        "applicationFolderPosition": { "x": 480, "y": 180 }
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  }
+}

@@ -1,0 +1,74 @@
+[package]
+name = "facetimelapse"
+description = "FaceTimelapse desktop app: Tauri 2 shell around face-engine and timelapse-video."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+default-run = "facetimelapse"
+
+[lib]
+# `_lib` suffix avoids a name clash with the binary on Windows (cargo#8519).
+name = "facetimelapse_lib"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "facetimelapse"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+# `macos-private-api`: transparent window for the DESIGN.md sidebar vibrancy.
+tauri = { version = "2.12.5", features = ["macos-private-api"] }
+tauri-plugin-dialog = "2.8.3"
+tauri-plugin-opener = "2.7.2"
+tauri-plugin-window-state = "2.5.0"
+# Already in Tauri's dependency graph; used directly for oneshot channels and
+# async waiting in command handlers.
+tokio = { version = "1", default-features = false, features = ["sync", "time"] }
+
+face-engine = { path = "../crates/face-engine" }
+timelapse-video = { path = "../crates/timelapse-video" }
+
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# Sizes the app's single global pool for heavy work (cores − 1).
+rayon.workspace = true
+chrono = { workspace = true, features = ["clock"] }
+parking_lot = "0.12"
+log = { version = "0.4.34", features = ["std"] }
+# Test-only GUI harness (QA): linked only with the `e2e` feature, which
+# refuses to compile without debug assertions (see `src/lib.rs`).
+facetimelapse-e2e = { path = "e2e", optional = true }
+
+# macOS only, all already in Tauri's dependency graph, used without `unsafe`:
+# a user-initiated NSProcessInfo activity while a job runs (App Nap,
+# `src/jobs/keep_awake.rs`) and no window open animation (`src/lib.rs`).
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6.5"
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSProcessInfo", "NSString", "block2"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSResponder", "NSWindow"] }
+block2 = "0.6.2"
+
+[dev-dependencies]
+tauri = { version = "2.12.5", features = ["test"] }
+tempfile.workspace = true
+
+[features]
+# Enabled by the Tauri CLI for production builds (serves the embedded `ui/dist`).
+custom-protocol = ["tauri/custom-protocol"]
+# Test-only: drives the real window from a local script (`FT_E2E_SCRIPT`)
+# for real-app QA. Never in release builds or bundles.
+e2e = ["dep:facetimelapse-e2e"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "warn"

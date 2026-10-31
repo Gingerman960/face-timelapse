@@ -1,0 +1,37 @@
+/* Overlays: popovers and toasts (the export sheet's own styles live in features/export).
+   Both leave with a short exit played from script (presence.ts: popover 100 ms, toast 150 ms,
+   on --ease-in); while it plays the element is inert, so nothing waits for it. */
+
+.popover {
+  position: fixed; z-index: 40; width: 320px; padding: var(--s4);
+  border-radius: var(--r-panel); background: var(--raised); box-shadow: var(--shadow-sheet);
+  display: grid; gap: var(--s2); animation: ft-fade var(--dur-fast) var(--ease-standard) both;
+}
+.popover h3 { font-size: var(--text-ui); font-weight: var(--weight-strong); }
+.popover p { color: var(--text-2); line-height: var(--leading-prose); }
+.popover p.popover-help { font-size: var(--text-small); }
+.popover .row { margin-top: var(--s2); }
+
+.toasts { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 60; display: grid; gap: var(--s2); justify-items: center; pointer-events: none; }
+.toast {
+  pointer-events: auto; display: flex; align-items: center; gap: var(--s3);
+  padding: 8px 8px 8px 14px; border-radius: var(--r-pill); background: var(--raised); box-shadow: var(--shadow-sheet);
+  font-size: var(--text-ui); max-width: 560px; animation: ft-toast-in var(--dur-base) var(--ease-out) both;
+}
+.toast[data-tone="stop"] .icon { color: var(--stop); }
+/* The action (Undo) is a 24 px pill, the WCAG 2.2 target floor (critique round 4, item 21; it was an
+   18 px text link): ink on a hairline ring, lit on hover, pressed in on click. */
+.toast-action {
+  height: var(--control-h-sm); padding: 0 var(--s3); flex: none;
+  border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-1);
+  box-shadow: inset 0 0 0 var(--hair) var(--line-strong);
+  font-size: var(--text-ui); font-weight: var(--weight-strong); white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-press) var(--ease-standard);
+}
+.toast-action:hover { background: var(--hover); }
+.toast-action:active { background: var(--pressed); transform: scale(0.97); }
+@keyframes ft-toast-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .toast-action:active { transform: none; }
+}
+

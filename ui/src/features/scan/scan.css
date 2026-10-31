@@ -1,0 +1,120 @@
+/* Scan: status sentence, tally, live contact sheet; after the scan the same
+   sheet becomes the library view with a status filter (P6). */
+
+.scan-screen { display: grid; grid-template-rows: auto auto minmax(0, 1fr); height: 100%; }
+.scan-band { position: relative; display: flex; align-items: flex-end; gap: var(--s7); padding: var(--s1) var(--s7) var(--s4); }
+.scan-line { display: grid; gap: var(--s2); min-width: 0; }
+.scan-line h2 { font-size: var(--text-statement); font-weight: var(--weight-display); letter-spacing: var(--tracking-statement); line-height: var(--leading-statement); font-variant-numeric: tabular-nums; }
+.scan-line h2 b { font-weight: var(--weight-medium); }
+
+/* The tally: a glyph, the count in the data font, then words; nothing at zero in the library. */
+.tally { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s5); font-size: var(--text-ui); color: var(--text-2); }
+.tally > span { display: inline-flex; align-items: center; gap: 7px; }
+.tally .mono { color: var(--text-1); font-size: var(--text-label); }
+.g { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.g-you { background: var(--text-1); }
+.g-unsure { box-shadow: inset 0 0 0 2px var(--safelight); }
+.g-other { box-shadow: inset 0 0 0 1px var(--text-3); }
+.g-cache { box-shadow: inset 0 0 0 1px var(--text-3); background: repeating-linear-gradient(45deg, var(--text-3) 0 1px, transparent 1px 3px); }
+.g-failed { background: var(--stop); }
+/* Kept and left out are your decisions: the chinagraph tick and strike, as on the review queue. */
+.tally svg.g-mark { width: 11px; height: 11px; flex: none; }
+
+.scan-rate { margin-left: auto; display: grid; justify-items: end; gap: 2px; text-align: right; flex: none; }
+.scan-rate strong { font-size: var(--text-ui); font-weight: var(--weight-strong); }
+.scan-rate .file { color: var(--text-3); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 12 px clear of the sheet, so rows scrolling under the faded top edge never ghost the meter (critique round 4, P2-15). */
+.scan-meter { margin: 0 var(--s7) var(--s3); }
+.scan-filter { padding: 0 var(--s7) var(--s3); display: flex; align-items: center; gap: var(--s4); }
+.scan-filter .hint { color: var(--text-3); font-size: var(--text-small); }
+/* A stopped scan says so under the statement (critique round 5, P3-26): the band becomes two
+   rows, so the rate column still sits level with the tally, and the notice reads after it. */
+.scan-band.is-stopped { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; row-gap: var(--s3); }
+.scan-band.is-stopped .scan-rate { margin-left: 0; }
+.scan-stopped { grid-column: 1 / -1; justify-self: start; max-width: 60ch; }
+
+/* scroll-padding keeps a photo the keyboard moves to clear of the faded top edge. */
+.sheet-scroll { position: relative; overflow: auto; padding: var(--s5) var(--s7) var(--s6); scroll-padding-block: var(--s6) var(--s5); mask-image: linear-gradient(to bottom, transparent 0, #000 22px); -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px); contain: strict; }
+.sheet-rows { position: relative; width: 100%; }
+.strip { position: absolute; left: 0; right: 0; display: grid; gap: 3px; padding: 15px 3px 3px; background: var(--rebate); border-radius: 1.5px; }
+.frame-cell { position: relative; aspect-ratio: 4 / 3; padding: 0; border: 0; background: transparent; }
+.frame-cell img { width: 100%; height: 100%; object-fit: cover; }
+.frame-cell .edge { position: absolute; left: 1px; top: -13px; }
+.frame-cell.unexposed { background: color-mix(in oklch, var(--rebate), var(--z10) 4%); }
+.frame-cell.unsure::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1.5px var(--safelight); z-index: 1; pointer-events: none; }
+.frame-cell.dim img { opacity: 0.35; filter: grayscale(1); }
+.frame-cell .q { position: absolute; z-index: 2; right: 3px; top: 3px; width: 15px; height: 15px; border-radius: 50%; background: var(--safelight); color: oklch(18% 0 0); display: grid; place-items: center; }
+.frame-cell .q .icon { width: 10px; height: 10px; }
+.frame-cell .tag { position: absolute; z-index: 2; left: 3px; bottom: 3px; padding: 1px 5px; border-radius: 3px; background: oklch(0% 0 0 / 0.62); color: oklch(96% 0 0); font-size: var(--text-label); font-weight: var(--weight-strong); }
+.frame-cell.newest { outline: 1px solid var(--z8); outline-offset: 2px; z-index: 1; }
+/* The outline marks the newest developed frame (frontier.ts): it moves when a develop ends, and only
+   ever onto a frame whose image shows with every frame before it settled (critique round 5, P1-6). */
+/* A frame whose image is still on its way reads as unexposed film, not a black hole. */
+.frame-cell { background: color-mix(in oklch, var(--rebate), var(--z10) 4%); }
+
+/* Live scan. A frame waiting for its image is latent: a lifted rebate tone
+   that breathes (opacity only). Each frame's delay is set when it mounts
+   (--latent-delay), locked to the document clock and 160 ms behind the frame
+   before it, so the run at the leading edge breathes as one wave travelling
+   toward the newest frame instead of twinkling (critique round 4, P2-15).
+   A frame whose image landed ahead of the frames before it stays latent too
+   (held, at most 400 ms), so the sheet develops along one edge (frontier.ts).
+   Unexposed slots (no frame read yet) stay flat rebate. */
+.sheet-scroll {
+  --latent: color-mix(in oklch, var(--rebate), var(--z10) 12%);
+}
+/* True development (signature moment 4) runs on --ease-develop (tokens.css): an H&D-like sigmoid,
+   a slow toe, a fast middle, a long shoulder. The frontier sets each develop's start and length on
+   the frame (--develop-delay, --develop-dur): a batch released together sweeps along the edge, and
+   a develop lasts about four frames of reading, so about four develop at once at any pace
+   (--dur-true-develop on a slow scan). */
+.frame-cell[data-film="latent"]::after { content: ""; position: absolute; inset: 0; background: var(--latent); animation: ft-latent 2.4s var(--ease-standard) var(--latent-delay, 0ms) infinite alternate; pointer-events: none; }
+.frame-cell:is([data-film="latent"], [data-film="blank"]) img { opacity: 0; }
+/* A frame develops: the image comes up from flat, bright latent grey (contrast .55,
+   brightness 1.25) to neutral while the latent layer gives way. The filter runs only
+   here, on about four images at once, and will-change only while it runs: the frame
+   turns "fixed" when the animation ends. A develop too short for the easing to show
+   (a fast scan, data-quick) is opacity only. */
+.frame-cell[data-film="fresh"] img { will-change: opacity, filter; animation: ft-develop-true var(--develop-dur, var(--dur-true-develop)) var(--ease-develop) var(--develop-delay, 0ms) both; }
+.frame-cell[data-film="fresh"][data-quick] img { will-change: opacity; animation-name: ft-fade; }
+.frame-cell[data-film="fresh"]::after { content: ""; position: absolute; inset: 0; background: var(--latent); opacity: 0; animation: ft-fix var(--develop-dur, var(--dur-true-develop)) var(--ease-develop) var(--develop-delay, 0ms) both; pointer-events: none; }
+/* A frame that lands behind the edge (passed while still on its way) fades in rather than snapping. */
+.frame-cell[data-film="fixed"] img { transition: opacity var(--dur-xfade) linear; }
+@keyframes ft-develop-true {
+  from { opacity: 0; filter: contrast(0.55) brightness(1.25); }
+  to { opacity: 1; filter: contrast(1) brightness(1); }
+}
+@keyframes ft-fix { from { opacity: 0.85; } to { opacity: 0; } }
+/* Reduced motion: the latent tone holds still, and a new frame fades in briefly with no filter. */
+@media (prefers-reduced-motion: reduce) {
+  .frame-cell[data-film="latent"]::after { animation: none; opacity: 0.75; }
+  .frame-cell[data-film="fresh"] img,
+  .frame-cell[data-film="fresh"][data-quick] img { will-change: opacity; animation: ft-fade var(--dur-xfade) linear both; }
+  .frame-cell[data-film="fresh"]::after { animation: ft-fix var(--dur-xfade) linear both; }
+}
+
+.frame-cell[aria-pressed="true"] { outline: 2px solid var(--cursor); outline-offset: 1px; z-index: 2; }
+.frame-cell:focus-visible { outline-offset: 1px; }
+.jump-newest { position: absolute; right: var(--s7); bottom: var(--s5); z-index: 4; }
+.sheet-empty { display: grid; place-items: center; height: 100%; color: var(--text-2); }
+
+/* No results to show (N5, critique round 4 P2-20): the band keeps its shape. The
+   statement and why on the left, the folder's facts where the rate would be, and
+   two strips of unexposed film where the contact sheet would be. */
+.scan-empty .scan-band { padding-top: var(--s7); }
+.scan-empty-why { max-width: 52ch; color: var(--text-2); font-size: var(--text-ui); line-height: var(--leading-prose); text-wrap: pretty; }
+.scan-empty-facts { margin-left: auto; flex: none; width: clamp(220px, 24vw, 300px); }
+.scan-empty-film { display: grid; gap: var(--s2); align-content: start; padding: var(--s5) var(--s7) 0; }
+.strip.is-static { position: relative; grid-template-columns: repeat(10, minmax(0, 1fr)); }
+
+@media (max-width: 1180px) {
+  .scan-band { gap: var(--s5); padding: var(--s1) var(--s5) var(--s3); }
+  .sheet-scroll { padding: var(--s4) var(--s5) var(--s5); }
+  .scan-meter { margin: 0 var(--s5) var(--s3); }
+  .scan-filter { padding: 0 var(--s5) var(--s3); }
+  .scan-band.is-stopped { column-gap: var(--s5); }
+  .scan-line h2 { font-size: calc(var(--text-statement) * 0.82); }
+  .scan-empty-film { padding: var(--s4) var(--s5) 0; }
+  .strip.is-static { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .strip.is-static > :nth-child(n + 8) { display: none; }
+}

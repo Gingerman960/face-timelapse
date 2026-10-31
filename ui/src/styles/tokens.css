@@ -1,0 +1,368 @@
+/* FaceTimelapse design tokens: "Darkroom / Light Table".
+   Source of truth for docs/rewrite/DESIGN.md. Phase 2 copies this file to
+   ui/src/styles/tokens.css unchanged.
+
+   Neutrals are an eleven-step Zone System ramp (Z0 deepest .. Z10 paper
+   white). No other greys exist. Hue is a near-neutral silver (h 80, c 0.004)
+   so skin tones in photos are judged against a true neutral surround. */
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("../assets/fonts/BricolageGrotesque-Variable-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("../assets/fonts/BricolageGrotesque-Variable-latin-ext.woff2") format("woff2");
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Martian Mono";
+  src: url("../assets/fonts/MartianMono-Variable-latin.woff2") format("woff2");
+  font-weight: 100 800;
+  font-stretch: 75% 112.5%;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ── Zone ramp (OKLCH lightness) ─────────────────────────────── */
+  --z0: oklch(14.5% 0.004 80);
+  --z1: oklch(18.5% 0.004 80);
+  --z2: oklch(22.5% 0.004 80);
+  --z3: oklch(29% 0.004 80);
+  --z4: oklch(38% 0.004 80);
+  --z5: oklch(50% 0.004 80);
+  --z6: oklch(62% 0.004 80);
+  --z7: oklch(74% 0.004 80);
+  --z8: oklch(85% 0.004 80);
+  --z9: oklch(93.5% 0.004 80);
+  --z10: oklch(98% 0.003 80);
+
+  /* ── Type ─────────────────────────────────────────────────────── */
+  --font-sans: "Bricolage Grotesque", ui-sans-serif, -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Chrome uses two sizes; hierarchy comes from weight, case and width.
+     Scale is spent on content only (dates, counts). */
+  --text-edge: 9.5px;     /* edge print: condensed mono caps on frames (decorative, aria-hidden) */
+  --text-label: 11px;     /* condensed caps labels, captions, meta, key caps: the floor */
+  --text-small: 12px;     /* help lines and secondary prose: the body floor */
+  --text-ui: 13px;        /* body, controls, list rows */
+  --text-title: 15px;     /* stage title, sheet title, popover title */
+  --text-lead: 18px;      /* Review's candidate date: the screen's one display moment */
+  --text-heading: 22px;   /* inspector date, empty-state and done leads */
+  --text-statement: 34px; /* the scan's status sentence */
+  --text-display: 40px;   /* Days year numeral, player year */
+  --text-hero: 76px;      /* single hero numeral per screen at most */
+
+  /* Four weights (critique round 4: ten were in use, and 600–660 can't be told apart at
+     13–15 px): regular prose, medium controls, strong titles and values, light display. */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 600;
+  --weight-display: 300;
+
+  /* Rhythm per size (critique round 5, P2-15): each size has one tracking and one leading,
+     tightening as the size grows (Bricolage's optical sizes do the rest). Shared rhythms,
+     each with its reason: caps labels track out; wrapped prose at 13 px and under reads at
+     1.5; single-line stacks (a row's name over its status, a toolbar title) sit at 1.2;
+     numerals and edge print are solid. typeScale.test.ts keeps rules to their size's. */
+  --tracking-edge: 0.06em;
+  --tracking-caps: 0.07em;
+  --tracking-ui: -0.003em;
+  --tracking-title: -0.01em;
+  --tracking-lead: -0.012em;
+  --tracking-heading: -0.018em;
+  --tracking-statement: -0.03em;
+  --tracking-display: -0.035em;
+  --tracking-hero: -0.04em;
+  --leading-edge: 1;
+  --leading-label: 1.3;
+  --leading-small: 1.45;
+  --leading-ui: 1.38;
+  --leading-title: 1.25;
+  --leading-lead: 1.2;
+  --leading-heading: 1.15;
+  --leading-statement: 1.05;
+  --leading-display: 1;
+  --leading-hero: 0.92;
+  --leading-prose: 1.5;
+  --leading-tight: 1.2;
+  --leading-solid: 1;
+  /* Over photographs (critique round 5, P3-23): one ink and one shade that read on any picture
+     in both themes, for marks, numerals and chips laid on a photo or a frame. */
+  --on-photo-ink: oklch(97% 0 0);
+  --on-photo-shade: oklch(0% 0 0 / 0.62);
+  --on-photo-edge: oklch(0% 0 0 / 0.45);
+  --on-photo-glow: 0 1px 2px oklch(0% 0 0 / 0.65);
+  /* Under a caption burned into a print (the F viewer's date): 45 % black at the foot, clear by its top. */
+  --on-photo-scrim: linear-gradient(to top, oklch(0% 0 0 / 0.45), oklch(0% 0 0 / 0));
+  --width-condensed: 78%;  /* font-stretch for labels and edge print */
+  --width-normal: 100%;
+  --width-wide: 100%;      /* Bricolage tops out at 100; display relies on the opsz axis */
+
+  /* ── Space (4px base, rhythm not uniformity) ─────────────────── */
+  --s-1: 2px;
+  --s0: 4px;
+  --s1: 6px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  --s8: 40px;
+  --s9: 56px;
+  --s10: 72px;
+
+  --gutter-sheet: 2px;     /* gap between frames in contact sheets */
+  --gutter-calendar: 2px;  /* gap between day cells */
+
+  /* ── Radii by role (never one radius for everything) ─────────── */
+  --r-frame: 1.5px;        /* photographs: prints have near-square corners */
+  --r-cell: 3px;           /* calendar day cells */
+  --r-control: 7px;        /* fields, segmented tracks */
+  --r-row: 8px;            /* list rows, recents, inspector row buttons */
+  --r-card: 10px;          /* tall rows that hold a picture or two lines: ledger rows, a day's photos, the library card, aspect tiles */
+  --r-pill: 999px;         /* buttons and toolbar capsules (macOS 26) */
+  --r-panel: 14px;         /* floating sidebar, popovers */
+  --r-sheet: 18px;         /* sheets */
+
+  /* ── Layout ───────────────────────────────────────────────────── */
+  --toolbar-h: 52px;
+  --sidebar-w: 236px;
+  --sidebar-rail-w: 68px;
+  --inspector-w: 296px;
+  --ribbon-h: 76px;
+  --hit-min: 24px;         /* WCAG 2.2 target size floor */
+  --control-h: 30px;
+  --control-h-sm: 24px;
+
+  /* ── Motion ───────────────────────────────────────────────────── */
+  --dur-press: 90ms;
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --dur-develop: 700ms;
+  --dur-true-develop: 900ms; /* the four newest scan frames: true development (signature moment 4) */
+  --ease-develop: cubic-bezier(0.62, 0.02, 0.24, 1); /* a sigmoid: slow start, steep middle, gentle settle */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);      /* expo out: arrivals */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);    /* state changes */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);          /* exits, kept short */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);   /* sheets, drawers */
+  /* Exits run at about 60 % of their entrance on --ease-in (critique round 4). */
+  --dur-exit-fast: 100ms;  /* popovers */
+  --dur-exit: 150ms;       /* toasts */
+  --dur-exit-slow: 200ms;  /* sheets */
+  --dur-pen: 360ms;        /* a chinagraph mark drawn by the pen */
+  --dur-xfade: 120ms;      /* one print giving way to the next */
+
+  /* Neutral ink for "where you are": focus, current stage, playhead, selection.
+     Chinagraph red is reserved for editorial decisions about photos. */
+  --focus: var(--text-1);
+  --cursor: var(--text-1);
+
+  /* ── Hairline: one device pixel on Retina ────────────────────── */
+  --hair: 1px;
+}
+@media (min-resolution: 2dppx) {
+  :root { --hair: 0.5px; }
+}
+
+/* ── Semantic roles: Darkroom (dark) ───────────────────────────── */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: var(--z0);             /* where photographs live */
+  --chrome: var(--z1);             /* sidebar, inspector, toolbar base */
+  --raised: var(--z2);             /* sheets, popovers, controls */
+  --sunken: oklch(11.5% 0.004 80); /* wells: empty frames, tracks */
+  --hover: color-mix(in oklch, var(--z10) 7%, transparent);
+  --pressed: color-mix(in oklch, var(--z10) 11%, transparent);
+  --selected-row: color-mix(in oklch, var(--z10) 9%, transparent);
+  /* One "on" look app-wide (critique round 3): a pressed toggle and a selected segment share an opaque
+     fill a step off the raised surface (lit in dark, pressed-in on paper) and a 1 px ink ring, so "on"
+     never relies on the ring alone. Solid ink stays for primary plates, the play disc and switches. */
+  --pressed-fill: color-mix(in oklch, var(--raised), var(--z10) 17%);
+  /* A secondary capsule: the raised surface. In light it is a Z9 step with a hairline ring, so it
+     never reads as the same white pill as a tertiary hairline control (critique round 4). */
+  --quiet-fill: var(--raised);
+  --quiet-ring: transparent;
+  --pressed-ring: color-mix(in oklch, var(--z10) 52%, transparent);
+  --line: var(--z3);
+  --line-strong: var(--z4);
+  --text-1: var(--z9);
+  --text-2: var(--z7);
+  --text-3: var(--z6);
+  --text-disabled: var(--z5);
+  /* Reversed plate: the one primary action. Z8, not paper white, so it never outshines the
+     photos (critique round 4: on Days the plate was the brightest thing); Z0 on Z8 is 12.5:1. */
+  --plate: var(--z8);
+  --plate-ink: var(--z0);
+  --plate-hover: var(--z9);
+
+  /* Chinagraph: the editor's grease pencil. Means "your decision":
+     chosen frame, kept match, playhead, current stage, focus. */
+  --mark: oklch(68% 0.185 33);
+  --mark-ink: var(--z0);
+  --mark-soft: color-mix(in oklch, var(--mark) 18%, transparent);
+  /* Safelight: not fixed yet. Unsure matches, warnings. */
+  --safelight: oklch(80% 0.13 78);
+  --safelight-soft: color-mix(in oklch, var(--safelight) 16%, transparent);
+  /* Stop: errors and destructive actions, always with icon + words. */
+  --stop: oklch(66% 0.2 22);
+  --stop-ink: var(--z0);           /* label on a stop-red button: 5.8:1 (white was 3.3:1) */
+  --stop-soft: color-mix(in oklch, var(--stop) 16%, transparent);
+  /* Days alternates fold: the turned-back corner of the print. */
+  --fold-back: var(--z9);
+
+  --guide: oklch(98% 0 0 / 0.78);  /* alignment template lines over photos */
+  --guide-shadow: oklch(0% 0 0 / 0.55);
+  /* Crop brackets: they reach past the photo onto the page, so they are drawn
+     in the page's ink with a halo of the page's tone (critique round 2). */
+  --bracket: var(--guide);
+  --bracket-halo: var(--guide-shadow);
+  --scrim: oklch(8% 0.004 80 / 0.62);
+  --glass: color-mix(in oklch, var(--z1) 72%, transparent);
+  --glass-edge: color-mix(in oklch, var(--z10) 10%, transparent);
+  --glass-blur: 24px;
+
+  --shadow-print: 0 0 0 var(--hair) oklch(0% 0 0 / 0.5);
+  --shadow-panel: 0 0 0 var(--hair) oklch(100% 0 0 / 0.07), 0 12px 32px -8px oklch(0% 0 0 / 0.55);
+  --shadow-sheet: 0 0 0 var(--hair) oklch(100% 0 0 / 0.1), 0 32px 80px -16px oklch(0% 0 0 / 0.7);
+  --shadow-control: inset 0 0.5px 0 oklch(100% 0 0 / 0.08);
+}
+
+/* ── Semantic roles: Light Table (light) ───────────────────────── */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --canvas: var(--z10);            /* backlit opal glass: brightest surface */
+  --chrome: var(--z9);             /* the desk around the table */
+  --raised: oklch(99.5% 0.002 80);
+  --sunken: oklch(95.5% 0.004 80);
+  --hover: color-mix(in oklch, var(--z0) 5%, transparent);
+  --pressed: color-mix(in oklch, var(--z0) 9%, transparent);
+  --selected-row: color-mix(in oklch, var(--z0) 7%, transparent);
+  --pressed-fill: color-mix(in oklch, var(--raised), var(--z0) 10%);
+  --pressed-ring: color-mix(in oklch, var(--z0) 48%, transparent);
+  --quiet-fill: var(--z9);
+  --quiet-ring: var(--line-strong);
+  --line: var(--z8);
+  --line-strong: var(--z7);
+  --text-1: var(--z0);
+  --text-2: var(--z4);
+  --text-3: oklch(47% 0.004 80);
+  --text-disabled: var(--z6);
+  --plate: var(--z0);
+  --plate-ink: var(--z10);
+  --plate-hover: var(--z2);
+
+  --mark: oklch(52% 0.2 31);
+  --mark-ink: var(--z10);
+  --mark-soft: color-mix(in oklch, var(--mark) 12%, transparent);
+  --safelight: oklch(50% 0.12 68);
+  --safelight-soft: color-mix(in oklch, var(--safelight) 14%, transparent);
+  --stop: oklch(52% 0.2 24);
+  --stop-ink: var(--z10);
+  --stop-soft: color-mix(in oklch, var(--stop) 12%, transparent);
+  --fold-back: var(--z4);
+
+  --guide: oklch(100% 0 0 / 0.85);
+  --guide-shadow: oklch(0% 0 0 / 0.45);
+  --bracket: var(--z0);
+  --bracket-halo: oklch(100% 0 0 / 0.9);
+  --scrim: oklch(97% 0.003 80 / 0.7);
+  --glass: color-mix(in oklch, var(--z10) 70%, transparent);
+  --glass-edge: color-mix(in oklch, var(--z0) 9%, transparent);
+
+  --shadow-print: 0 0.5px 1px oklch(20% 0.01 80 / 0.14), 0 2px 6px -2px oklch(20% 0.01 80 / 0.16);
+  --shadow-panel: 0 0 0 var(--hair) oklch(0% 0 0 / 0.1), 0 12px 32px -10px oklch(20% 0.01 80 / 0.22);
+  --shadow-sheet: 0 0 0 var(--hair) oklch(0% 0 0 / 0.12), 0 32px 80px -20px oklch(20% 0.01 80 / 0.35);
+  --shadow-control: 0 0.5px 1px oklch(0% 0 0 / 0.12), inset 0 0 0 var(--hair) oklch(0% 0 0 / 0.1);
+}
+
+/* Follow the system unless the user pinned a theme. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --canvas: var(--z10);
+    --chrome: var(--z9);
+    --raised: oklch(99.5% 0.002 80);
+    --sunken: oklch(95.5% 0.004 80);
+    --hover: color-mix(in oklch, var(--z0) 5%, transparent);
+    --pressed: color-mix(in oklch, var(--z0) 9%, transparent);
+    --selected-row: color-mix(in oklch, var(--z0) 7%, transparent);
+    --pressed-fill: color-mix(in oklch, var(--raised), var(--z0) 10%);
+    --pressed-ring: color-mix(in oklch, var(--z0) 48%, transparent);
+    --quiet-fill: var(--z9);
+    --quiet-ring: var(--line-strong);
+    --line: var(--z8);
+    --line-strong: var(--z7);
+    --text-1: var(--z0);
+    --text-2: var(--z4);
+    --text-3: oklch(47% 0.004 80);
+    --text-disabled: var(--z6);
+    --plate: var(--z0);
+    --plate-ink: var(--z10);
+    --plate-hover: var(--z2);
+    --mark: oklch(52% 0.2 31);
+    --mark-ink: var(--z10);
+    --mark-soft: color-mix(in oklch, var(--mark) 12%, transparent);
+    --safelight: oklch(50% 0.12 68);
+    --safelight-soft: color-mix(in oklch, var(--safelight) 14%, transparent);
+    --stop: oklch(52% 0.2 24);
+    --stop-ink: var(--z10);
+    --stop-soft: color-mix(in oklch, var(--stop) 12%, transparent);
+    --fold-back: var(--z4);
+    --guide: oklch(100% 0 0 / 0.85);
+    --guide-shadow: oklch(0% 0 0 / 0.45);
+    --bracket: var(--z0);
+    --bracket-halo: oklch(100% 0 0 / 0.9);
+    --scrim: oklch(97% 0.003 80 / 0.7);
+    --glass: color-mix(in oklch, var(--z10) 70%, transparent);
+    --glass-edge: color-mix(in oklch, var(--z0) 9%, transparent);
+    --shadow-print: 0 0.5px 1px oklch(20% 0.01 80 / 0.14), 0 2px 6px -2px oklch(20% 0.01 80 / 0.16);
+    --shadow-panel: 0 0 0 var(--hair) oklch(0% 0 0 / 0.1), 0 12px 32px -10px oklch(20% 0.01 80 / 0.22);
+    --shadow-sheet: 0 0 0 var(--hair) oklch(0% 0 0 / 0.12), 0 32px 80px -20px oklch(20% 0.01 80 / 0.35);
+    --shadow-control: 0 0.5px 1px oklch(0% 0 0 / 0.12), inset 0 0 0 var(--hair) oklch(0% 0 0 / 0.1);
+  }
+}
+
+/* Accessibility preferences, restated after every theme block with the
+   themes' own specificity, so they hold in all four modes: Light or Dark
+   pinned in the app, or either one through System (critique round 4: on a
+   bare :root they lost to the themed rules everywhere but System dark).
+   The values are the theme's own tokens, so each mode keeps its palette. */
+@media (prefers-contrast: more) {
+  :root, :root[data-theme="dark"], :root[data-theme="light"], :root:not([data-theme="dark"]) {
+    --line: var(--z5); --line-strong: var(--z6); --text-3: var(--text-2); --hair: 1px;
+  }
+  :root[data-theme="light"] { --line: var(--z6); --line-strong: var(--z5); }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --line: var(--z6); --line-strong: var(--z5); }
+}
+
+/* Reduced transparency: glass becomes opaque chrome. */
+@media (prefers-reduced-transparency: reduce) {
+  :root, :root[data-theme="dark"], :root[data-theme="light"], :root:not([data-theme="dark"]) { --glass: var(--chrome); --glass-blur: 0px; }
+}
+
+/* Reduced motion: movement collapses to short cross-fades. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-base: 120ms;
+    --dur-slow: 120ms;
+    --dur-develop: 0ms;
+    --dur-true-develop: 120ms;
+  }
+}

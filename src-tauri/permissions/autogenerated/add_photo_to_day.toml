@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-add-photo-to-day"
+description = "Enables the add_photo_to_day command without any pre-configured scope."
+commands.allow = ["add_photo_to_day"]
+
+[[permission]]
+identifier = "deny-add-photo-to-day"
+description = "Denies the add_photo_to_day command without any pre-configured scope."
+commands.deny = ["add_photo_to_day"]

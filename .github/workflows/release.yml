@@ -1,79 +1,366 @@
 name: Release
 
+# Push a tag `v<version>` (equal to `version` in src-tauri/tauri.conf.json) to
+# build every bundle and attach it to a DRAFT GitHub release; review the
+# draft and publish it by hand. docs/BUILD.md#releasing explains the pipeline.
+#
+# Security model: third-party build code (npm install scripts, Vite plugins,
+# every crate's build.rs) runs only in `build` / `bundle-windows`, which have a
+# read-only token, no persisted git credentials and no secrets. Signing jobs
+# run only Apple's or Microsoft's signing tools on the downloaded artifacts,
+# with secrets in step-level `env`. Only `publish` can write to the repository.
+# Release builds do not restore Rust build caches (no cache poisoning).
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)build, e.g. v2.0.0
+        type: string
+        required: true
 
-# Lets electron-builder create a draft release + upload artifacts.
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  NODE_VERSION: '24'
+  RUST_TOOLCHAIN: '1.99.1' # must equal rust-toolchain.toml (checked in preflight)
+  NASM_VERSION: '2.16.03'
+  NASM_WIN64_SHA256: 3ee4782247bcb874378d02f7eab4e294a84d3d15f3f6ee2de2f47a46aa7226e6
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
-  release:
-    name: Build & publish (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - name: Tag, app version and toolchain must agree
+        id: version
+        run: |
+          version=$(jq -r .version src-tauri/tauri.conf.json)
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match tauri.conf.json version $version (expected v$version)"
+            exit 1
+          fi
+          if ! grep -qx "channel = \"$RUST_TOOLCHAIN\"" rust-toolchain.toml; then
+            echo "::error::RUST_TOOLCHAIN ($RUST_TOOLCHAIN) differs from rust-toolchain.toml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build unsigned (${{ matrix.name }})
+    needs: preflight
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            build: npm run build:mac -- --publish always
-          - os: windows-latest
-            build: npm run build:win -- --publish always
-          - os: ubuntu-latest
-            build: npx electron-builder --linux --publish always
-
+          - name: macOS Apple silicon
+            os: macos-latest
+            platform: macos
+            target: aarch64-apple-darwin
+            arch: aarch64
+          # Cross-compiled on Apple silicon. No nasm: openh264 is only the
+          # fallback encoder on macOS (VideoToolbox is the default).
+          - name: macOS Intel
+            os: macos-latest
+            platform: macos
+            target: x86_64-apple-darwin
+            arch: x64
+          # Oldest supported Ubuntu runner: glibc 2.35 baseline for the AppImage/deb.
+          - name: Linux
+            os: ubuntu-22.04
+            platform: linux
+            target: x86_64-unknown-linux-gnu
+            arch: amd64
+          - name: Windows
+            os: windows-latest
+            platform: windows
+            target: x86_64-pc-windows-msvc
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-
-      # No system canvas deps — @napi-rs/canvas ships prebuilt binaries.
-
-      - uses: actions/setup-node@v4
+      - name: Disable CRLF conversion
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: '20'
-          cache: npm
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master, 2026-10-09
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+          components: clippy, rustfmt # listed in rust-toolchain.toml
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm # npm verifies every package against the lockfile's integrity hashes
+          cache-dependency-path: ui/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download face-api models
-        run: npm run download-models
-
-      - name: Configure signing env (only when secrets are present)
-        shell: bash
-        env:
-          CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
-          WIN_CSC_LINK_SECRET: ${{ secrets.WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD_SECRET: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-          APPLE_ID_SECRET: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD_SECRET: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID_SECRET: ${{ secrets.APPLE_TEAM_ID }}
+      # nasm gives openh264 (the Windows/Linux video encoder) its x86 SIMD
+      # kernels. Linux: Ubuntu's signed package. Windows: the official zip,
+      # verified against a pinned SHA-256.
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
         run: |
-          # electron-builder treats CSC_LINK="" (empty string) as a real
-          # path-to-cert and fails with `× <cwd> not a file`. Only forward
-          # signing vars when the underlying secret is actually set.
-          if [ -n "$CSC_LINK_SECRET" ]; then
-            echo "CSC_LINK=$CSC_LINK_SECRET" >> "$GITHUB_ENV"
-            echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
-          fi
-          if [ -n "$WIN_CSC_LINK_SECRET" ]; then
-            echo "WIN_CSC_LINK=$WIN_CSC_LINK_SECRET" >> "$GITHUB_ENV"
-            echo "WIN_CSC_KEY_PASSWORD=$WIN_CSC_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
-          fi
-          if [ -n "$APPLE_ID_SECRET" ]; then
-            echo "APPLE_ID=$APPLE_ID_SECRET" >> "$GITHUB_ENV"
-            echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD_SECRET" >> "$GITHUB_ENV"
-            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID_SECRET" >> "$GITHUB_ENV"
-          fi
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libxdo-dev libssl-dev \
+            patchelf file build-essential nasm
+      - name: Install nasm (Windows, hash-pinned)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'nasm.zip'
+          Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/$env:NASM_VERSION/win64/nasm-$env:NASM_VERSION-win64.zip" -OutFile $zip
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+          if ($actual -ne $env:NASM_WIN64_SHA256) { throw "nasm zip checksum mismatch: $actual" }
+          Expand-Archive -LiteralPath $zip -DestinationPath $env:RUNNER_TEMP
+          Join-Path $env:RUNNER_TEMP "nasm-$env:NASM_VERSION" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
-      - name: Build + publish
+      - name: Cache ONNX models (verified by SHA-256 below)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: models
+          key: onnx-models-${{ hashFiles('scripts/fetch-models.sh') }}
+      - name: Fetch models
+        shell: bash
+        run: scripts/fetch-models.sh
+      - name: Install UI dependencies
+        run: npm --prefix ui ci
+
+      - name: Build macOS app (unsigned)
+        if: matrix.platform == 'macos'
+        run: |
+          npm --prefix ui run tauri -- build --ci --target ${{ matrix.target }} --bundles app --no-sign
+          mkdir -p out
+          tar -C "target/${{ matrix.target }}/release/bundle/macos" -czf "out/FaceTimelapse_${VERSION}_${{ matrix.arch }}.unsigned.app.tar.gz" FaceTimelapse.app
+      - name: Build Linux AppImage + deb
+        if: matrix.platform == 'linux'
+        run: |
+          npm --prefix ui run tauri -- build --ci --bundles appimage,deb --no-sign
+          mkdir -p out
+          cp target/release/bundle/appimage/*.AppImage target/release/bundle/deb/*.deb out/
+      # The NSIS installer is assembled later from the signed exe
+      # (bundle-windows), so the installed program is signed too.
+      - name: Build Windows exe (unsigned, no bundle)
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: |
+          npm --prefix ui run tauri -- build --ci --no-bundle
+          mkdir -p out
+          cp target/release/facetimelapse.exe out/
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          # linux-* artifacts are final; macos-*/windows-* go to signing.
+          name: ${{ matrix.platform == 'linux' && 'final' || 'unsigned' }}-${{ matrix.platform }}-${{ matrix.arch }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  sign-macos:
+    name: Sign + notarize (macOS ${{ matrix.arch }})
+    needs: [preflight, build]
+    runs-on: macos-latest
+    # Signing secrets can live in this environment (restrict it to `v*` tags
+    # and add reviewers in Settings › Environments); repository secrets work too.
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, x64]
+    env:
+      BASE: FaceTimelapse_${{ needs.preflight.outputs.version }}_${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+          sparse-checkout: scripts/release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-macos-${{ matrix.arch }}
+          path: in
+      - name: codesign, notarytool, stapler, hdiutil
         env:
-          # Required for GitHub Releases publish
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Don't let electron-builder/app-builder go hunting for a signing
-          # identity when none is configured; otherwise macOS unsigned
-          # builds fail at packaging time.
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: ${{ matrix.build }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: scripts/release/macos-sign.sh "in/$BASE.unsigned.app.tar.gz" out "$BASE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: final-macos-${{ matrix.arch }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  sign-windows-exe:
+    name: Sign Windows exe
+    needs: build
+    runs-on: windows-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+          sparse-checkout: scripts/release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-windows-x64
+          path: out
+      - name: signtool
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ vars.WINDOWS_TIMESTAMP_URL }}
+        run: ./scripts/release/windows-sign.ps1 -Path out/facetimelapse.exe
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-windows-exe
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  bundle-windows:
+    name: Bundle Windows installer
+    needs: [preflight, sign-windows-exe]
+    runs-on: windows-latest
+    steps:
+      - name: Disable CRLF conversion
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      # `tauri bundle` reads cargo metadata; nothing is compiled here.
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master, 2026-10-09
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy, rustfmt # listed in rust-toolchain.toml
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Cache ONNX models (verified by SHA-256 below)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: models
+          key: onnx-models-${{ hashFiles('scripts/fetch-models.sh') }}
+      - name: Fetch models (bundled as resources)
+        shell: bash
+        run: scripts/fetch-models.sh
+      - name: Install UI dependencies (Tauri CLI)
+        run: npm --prefix ui ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: signed-windows-exe
+          path: target/release
+      # --no-binary-patching keeps the exe byte-identical, so its signature
+      # stays valid inside the installer.
+      - name: tauri bundle (NSIS) around the signed exe
+        shell: bash
+        run: |
+          npm --prefix ui run tauri -- bundle --ci --bundles nsis --no-sign --no-binary-patching
+          mkdir -p out
+          cp target/release/bundle/nsis/*-setup.exe out/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-windows-installer
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  sign-windows-installer:
+    name: Sign Windows installer
+    needs: bundle-windows
+    runs-on: windows-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+          sparse-checkout: scripts/release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-windows-installer
+          path: out
+      - name: signtool
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ vars.WINDOWS_TIMESTAMP_URL }}
+        run: ./scripts/release/windows-sign.ps1 -Path (Get-ChildItem out/*-setup.exe).FullName
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: final-windows-x64
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Checksums, provenance, draft release
+    needs: [preflight, sign-macos, sign-windows-installer, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the draft release and upload assets
+      id-token: write # sign the provenance attestation (Sigstore)
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: final-*
+          path: dist
+          merge-multiple: true
+      - name: SHA-256 checksums
+        working-directory: dist
+        run: |
+          ls -l
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Build provenance attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: dist/SHA256SUMS.txt
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          if draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$draft" != "true" ]; then
+              echo "::error::Release $TAG is already published; refusing to replace its assets."
+              exit 1
+            fi
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+              --title "FaceTimelapse $VERSION" \
+              --notes "Downloads for macOS (Apple silicon and Intel), Windows and Linux. Verify downloads with SHA256SUMS.txt or \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`."
+          fi

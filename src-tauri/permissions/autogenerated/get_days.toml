@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-days"
+description = "Enables the get_days command without any pre-configured scope."
+commands.allow = ["get_days"]
+
+[[permission]]
+identifier = "deny-get-days"
+description = "Denies the get_days command without any pre-configured scope."
+commands.deny = ["get_days"]

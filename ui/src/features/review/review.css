@@ -1,0 +1,199 @@
+/* Review: reference | aligned candidate | likeness + facts, over the queue strip. */
+
+.review {
+  --aside-w: 264px; --col-gap: var(--s8);
+  position: relative; height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) var(--aside-w); grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: var(--col-gap); padding: var(--s2) var(--s7) 0;
+}
+
+/* The stage: the comparison pair and the decision buttons as one group,
+   centred in the space above the queue, so the buttons sit right under the
+   prints (critique round 2: no dead band). The prints take one size on a
+   shared top edge, sized from the stage's box (container units) less the
+   captions and the buttons, with the eye guide drawn across both. */
+.review-stage { --gap: var(--s6); --cap: 34px; --decide-h: calc(38px + var(--s5)); container-type: size; min-height: 0; display: grid; align-content: center; justify-items: center; row-gap: var(--s5); padding: var(--s2) 0 var(--s4); }
+.pair { position: relative; display: flex; justify-content: center; align-items: flex-start; gap: var(--gap); }
+.pair > * { --fw: min(calc((100cqh - var(--cap) - var(--decide-h)) * var(--frame-ar)), calc((100cqw - var(--gap)) / 2)); }
+.pair > figure { width: var(--fw); display: grid; grid-template-rows: auto auto; gap: var(--s2); min-width: 0; }
+.pair .pair-frame { position: relative; width: 100%; aspect-ratio: var(--frame-ar); overflow: hidden; border-radius: var(--r-frame); box-shadow: var(--shadow-print); background: var(--sunken); }
+.pair .pair-frame img { width: 100%; height: 100%; object-fit: cover; }
+.pair .candidate { height: auto; }
+.pair .candidate-frame { width: 100%; height: auto; }
+.eye-line {
+  position: absolute; left: 50%; top: calc(var(--fw) / (var(--frame-ar)) * var(--eye));
+  width: calc(2 * var(--fw) + var(--gap) + var(--s5) * 2); transform: translateX(-50%);
+  border-top: 0.5px solid color-mix(in oklch, var(--guide) 55%, transparent); pointer-events: none; z-index: 1;
+}
+.pair figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); min-width: 0; }
+.candidate { height: 100%; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: var(--s2); }
+/* A print still waiting for the next photo dims only if the wait outlasts this
+   grace: with the next prints prefetched it never does. */
+.candidate-frame { --hold-grace: 240ms; position: relative; height: 100%; aspect-ratio: var(--frame-ar); min-height: 0; overflow: hidden; border-radius: var(--r-frame); box-shadow: var(--shadow-print); background: var(--sunken); }
+
+/* ── The print (critique round 4, P1-4) ─────────────────────────────────
+   One layer per photo, stacked in the frame (and lifted off it as the
+   verdict). A new photo's print waits until it is decoded and aligned while
+   the outgoing one holds, then cross-fades over it; after a decision it rises
+   out of the well instead, since the decided print has flown to the film. */
+.print { position: absolute; inset: 0; }
+.print.xfade { animation: ft-fade var(--dur-xfade) var(--ease-standard) backwards; }
+.print.rise { animation: ft-fade var(--dur-base) var(--ease-out) backwards; }
+.print.held { opacity: 0.45; transition: opacity var(--dur-base) var(--ease-standard) var(--hold-grace); }
+/* The aligned photo, its edges feathered in its own space (the mask rotates
+   with it), so they fade into the fill instead of cutting hard diagonal
+   wedges (QA 7). */
+.print .cand-img {
+  --feather: 3%;
+  position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--feather), #000 calc(100% - var(--feather)), transparent);
+  mask-composite: intersect;
+}
+.print .cand-fallback { width: 100%; height: 100%; object-fit: cover; }
+/* v1.7: the backend's preview is the frame itself (its aspect, its extended edges): it just fills. */
+.print .cand-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Extended edges: where the aligned photo leaves the frame (a 7° tilt left
+   black wedges), the same photo drawn behind it, enlarged about the frame's
+   centre and blurred, the way the timelapse extends a frame's edges. One
+   static layer, blurred in frame space, reaching `--fill-bleed` past the frame
+   so the blur's own fade stays outside the frame, which clips it. */
+.print-fill { position: absolute; inset: calc(var(--fill-bleed) * -1); overflow: hidden; filter: blur(calc(var(--fill-bleed) / 2)) brightness(0.9); pointer-events: none; }
+.print-fill img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; }
+
+.candidate-frame .onion { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--dur-base) var(--ease-standard); pointer-events: none; }
+.candidate-frame svg.template { opacity: 0; transition: opacity var(--dur-base); position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; filter: drop-shadow(0 0 1px var(--guide-shadow)); }
+.candidate-frame svg.template * { fill: none; stroke: var(--guide); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.candidate-frame svg.template ellipse { stroke-dasharray: 3 5; }
+.candidate-frame[data-compare="true"] .onion { opacity: 0.5; }
+.candidate-frame[data-compare="true"] svg.template { opacity: 1; }
+.pair figcaption .when { font-size: var(--text-lead); font-weight: var(--weight-medium); letter-spacing: var(--tracking-lead); line-height: var(--leading-lead); }
+
+/* ── The verdict (critique round 4, signature moment 2) ─────────────────
+   The decided print is lifted off the table with its chinagraph mark and
+   flies to its slot on the film (WAAPI, transform and opacity). It exists
+   only while it flies, so it alone is promoted. */
+.verdict-layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.verdict { position: absolute; transform-origin: 0 0; will-change: transform, opacity; }
+.verdict-print { position: absolute; inset: 0; overflow: hidden; border-radius: var(--r-frame); background: var(--sunken); box-shadow: var(--shadow-panel); }
+/* Left out: the print goes to the film's grey at once, as the strike is drawn. */
+.verdict[data-review="rejected"] .print { filter: grayscale(1); }
+.verdict-mark { position: absolute; }
+.verdict-mark svg.mark { width: 100%; height: 100%; filter: drop-shadow(0 0 1px var(--guide-shadow)); }
+/* The tick on the print's corner, running past it as a pen would. */
+.verdict-mark.tick { right: -5px; bottom: -5px; width: 26%; aspect-ratio: 1; }
+/* The strike across the whole print, in the guide's ink over the photo. */
+.verdict-mark.strike { inset: -5px; }
+.verdict-mark.strike svg.mark { color: var(--guide); }
+
+/* ── Decision buttons ───────────────────────────────────────────────────
+   Primary, secondary, tertiary (critique round 3), and three materials in
+   both themes (critique round 4, P2-13): Keep is the screen's one plate while
+   photos are pending (the toolbar plate waits for the done state), Leave out
+   the app's quiet material (raised in the darkroom; a Z9 pill with a hairline
+   ring on the light table, like every secondary), Compare a bare hairline. */
+.decide { display: flex; gap: var(--s2); align-items: center; }
+.btn-decide { height: 38px; display: inline-flex; align-items: center; gap: var(--s2); padding: 0 var(--s4); border: 0; border-radius: var(--r-pill); background: var(--raised); color: var(--text-1); box-shadow: var(--shadow-control); font-size: var(--text-ui); font-weight: var(--weight-strong); transition: background-color var(--dur-fast), transform var(--dur-press); }
+.btn-decide:hover:not(:disabled) { background: color-mix(in oklch, var(--raised), var(--text-1) 7%); }
+.btn-decide:active:not(:disabled) { transform: scale(0.97); }
+.btn-decide:disabled { opacity: 0.4; }
+.btn-decide kbd { border: 0; padding: 0; color: var(--text-2); }
+.btn-decide.keep { background: var(--plate); color: var(--plate-ink); padding-right: 14px; }
+.btn-decide.keep:hover:not(:disabled) { background: var(--plate-hover); }
+.btn-decide.keep .icon, .btn-decide.keep kbd { color: inherit; }
+.btn-decide.keep kbd { opacity: 0.78; }
+.btn-decide.reject { background: var(--quiet-fill); box-shadow: inset 0 0 0 var(--hair) var(--quiet-ring), var(--shadow-control); }
+.btn-decide.reject:hover:not(:disabled) { background: color-mix(in oklch, var(--quiet-fill), var(--text-1) 6%); }
+.btn-decide.reject .icon { color: var(--text-2); }
+.btn-decide.compare { background: transparent; box-shadow: inset 0 0 0 var(--hair) var(--line-strong); color: var(--text-2); font-weight: var(--weight-medium); font-size: var(--text-ui); height: 32px; }
+.btn-decide.compare:hover:not(:disabled) { background: var(--hover); color: var(--text-1); }
+.btn-decide.compare[aria-pressed="true"] { color: var(--text-1); background: var(--pressed-fill); box-shadow: inset 0 0 0 1px var(--pressed-ring); }
+
+/* The way on while photos are pending: a quiet text action with its cost beside it (not underlined). */
+.skip-days { min-height: var(--control-h); padding: 0 var(--s2); white-space: nowrap; }
+.skip-days .meta { display: inline-block; margin-left: 0.25em; text-decoration: none; color: var(--text-3); }
+.skip-days:hover .meta { color: var(--text-2); }
+.review-facts { align-self: center; display: grid; gap: var(--s6); }
+.review-facts h2 { margin-bottom: var(--s3); }
+.likeness-scale { position: relative; height: 8px; display: block; }
+.likeness-scale .zone { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; }
+.z-out { background: var(--line-strong); }
+.z-unsure { background: var(--safelight); opacity: 0.85; }
+.z-in { background: var(--text-2); }
+.likeness-pin { position: absolute; top: -5px; width: 2px; height: 18px; margin-left: -1px; background: var(--text-1); border-radius: 1px; box-shadow: 0 0 0 2px var(--canvas); }
+.likeness-legend { display: grid; grid-template-columns: 40fr 20fr 40fr; margin-top: 9px; font-size: var(--text-label); color: var(--text-3); }
+.likeness-legend span:nth-child(2) { text-align: center; color: var(--safelight); }
+.likeness-legend span:last-child { text-align: right; }
+.likeness-value { margin-top: var(--s3); color: var(--text-2); font-size: var(--text-ui); line-height: var(--leading-prose); }
+.likeness-value .mono { color: var(--text-1); font-size: var(--text-small); }
+.keys { display: grid; gap: 5px; color: var(--text-2); font-size: var(--text-ui); }
+.keys h2 { margin-bottom: 4px; }
+.keys kbd { margin-right: 2px; }
+
+/* ── The film (critique round 4, P2-14): a strip is as long as its film ──
+   It ends 3 px after its last frame with a square cut. A short film (the
+   count beside it) centres under the stage: the queue's end padding is the
+   inspector column while the film leaves that much room, and gives it up as
+   the film grows, so a long film still takes the whole width and scrolls. */
+.queue {
+  --count-w: 64px;
+  grid-column: 1 / -1; display: flex; justify-content: center; align-items: flex-end; gap: var(--s3); min-width: 0;
+  padding: var(--s3) clamp(0px, calc(100% - var(--film-w, 0px) - var(--count-w)), calc(var(--aside-w) + var(--col-gap))) var(--s4) 0;
+  border-top: var(--hair) solid var(--line);
+}
+.queue .q-count { flex: none; padding-bottom: 6px; }
+/* A film of one: no count beside it (its rebate prints "01 / 01"), and a tighter band. */
+.queue[data-single] { --count-w: 0px; padding-top: var(--s2); padding-bottom: var(--s3); }
+.q-strip { position: relative; flex: 0 1 auto; width: var(--film-w); max-width: 100%; min-width: 0; padding: 15px 3px 5px; background: var(--rebate); border-radius: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+/* Only a film longer than its room scrolls, and only then does its end fade. */
+.q-strip[data-overflow] { mask-image: linear-gradient(90deg, #000 88%, transparent); }
+.q-track { position: relative; height: 56px; }
+.q-item { position: absolute; left: 0; bottom: 0; width: var(--cell); height: var(--cell); padding: 0; border: 0; background: none; border-radius: 3px; }
+.q-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
+.q-item .edge { position: absolute; left: 1px; top: -13px; }
+/* A film of one has no neighbour to keep clear of: its counter takes the whole frame ("▸ 01 / 01" was cut to "01 / 0"). */
+.queue[data-single] .q-item .edge { max-width: none; }
+.q-item svg.mark { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); }
+.q-item.out img { opacity: 0.35; filter: grayscale(1); }
+.q-item.out svg.mark { color: var(--text-2); }
+.q-item .tick { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%; background: var(--rebate); display: grid; place-items: center; }
+.q-item .tick svg.mark { position: static; width: 11px; height: 11px; }
+.q-item.current { width: 56px; height: 56px; margin: 0 6px; }
+.q-item.current img { box-shadow: 0 0 0 2px var(--rebate), 0 0 0 3.5px var(--cursor); }
+.q-item.current .edge { color: var(--z8); }
+.q-item.pending img { opacity: 0.8; }
+
+/* ── Gathering (critique round 6, P1-2) ──────────────────────────────────
+   Before the list is known: an empty stage over a short film of latent
+   prints, the rebate lifted toward the light like the scan's undeveloped
+   frames, breathing one after another. Reduced motion: they hold still. */
+.review-loading .q-latent { display: flex; gap: 5px; overflow: hidden; }
+.q-ghost {
+  flex: none; width: 44px; height: 44px; border-radius: 3px;
+  background: color-mix(in oklch, var(--rebate), var(--z10) 12%);
+  animation: ft-latent 2.4s var(--ease-standard) calc(var(--i, 0) * 160ms) infinite alternate both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .q-ghost { animation: none; opacity: 0.7; }
+}
+
+/* ── Done, or nothing to review (critique round 4, P2-14 and P2-20) ──────
+   The film is the result: the reviewed photos at 72 px with their ticks and
+   strikes, centred under the counts. With nothing to review, the same
+   composition without a film. */
+.review-done { height: 100%; display: grid; align-content: center; justify-items: center; gap: var(--s7); text-align: center; padding: 0 var(--s7) var(--s9); }
+.review-done .done-head { display: grid; justify-items: center; gap: var(--s3); }
+.review-done h2 { font-size: var(--text-heading); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); line-height: var(--leading-heading); text-wrap: balance; }
+.review-done p { color: var(--text-2); max-width: 44ch; text-wrap: pretty; }
+.review-done .q-strip { flex: none; max-width: min(100%, 1040px); }
+.review-done .q-track { height: var(--cell); }
+.review-done .q-item .tick { width: 24px; height: 24px; right: -4px; bottom: -4px; }
+.review-done .q-item .tick svg.mark { width: 14px; height: 14px; }
+
+@media (max-width: 1180px) {
+  .review { --aside-w: 200px; --col-gap: var(--s6); padding: var(--s2) var(--s5) 0; }
+  .pair { --gap: var(--s4); }
+  .keys { display: none; }
+}

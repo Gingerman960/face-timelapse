@@ -1,0 +1,49 @@
+[package]
+name = "timelapse-video"
+description = "Pure-Rust timelapse MP4 (H.264) encoder for FaceTimelapse: crossfades, date captions, letterboxing, progress and cancellation."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+# The bundled caption font (Martian Mono) is SIL OFL 1.1 (assets/fonts/OFL-MartianMono.txt).
+include = ["src/**", "assets/**", "README.md", "benches/**", "tests/**", "examples/**"]
+
+[dependencies]
+# H.264: the sys layer of the `openh264` crate, compiled from Cisco's BSD-2
+# source with `cc` (NEON .S files on aarch64; no nasm/cmake needed).
+openh264-sys2 = { version = "0.9.9", default-features = false, features = ["source"] }
+# SIMD RGB -> YUV 4:2:0 (NEON / AVX2 / SSE).
+yuv = "0.8.19"
+ab_glyph = "0.2.32"
+fast_image_resize.workspace = true
+image = { workspace = true, features = ["jpeg", "png"] }
+chrono.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+rayon.workspace = true
+
+# Hardware H.264 (VideoToolbox), the default encoder on macOS.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-video-toolbox = "0.3.2"
+objc2-core-media = "0.3.2"
+objc2-core-video = "0.3.2"
+objc2-core-foundation = "0.3.2"
+
+[dev-dependencies]
+criterion.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+
+[[bench]]
+name = "encode"
+harness = false
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "warn"

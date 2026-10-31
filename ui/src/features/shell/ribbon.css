@@ -1,0 +1,64 @@
+/* Decade ribbon: the shared map of the decade under Scan, Days and Timelapse. */
+
+.ribbon { grid-row: 3; position: relative; padding: 10px var(--s6) 8px var(--s4); border-top: var(--hair) solid var(--line); background: var(--canvas); }
+.ribbon-focus { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; height: 34px; }
+.ribbon-label { color: var(--text-1); font-size: var(--text-small); }
+.ribbon-decade { margin-left: 52px; position: relative; margin-top: 6px; }
+.ribbon canvas { display: block; width: 100%; }
+.ribbon-years { position: relative; height: 14px; margin-top: 3px; }
+.ribbon-years span { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--font-mono); font-stretch: 87.5%; font-size: var(--text-label); color: var(--text-3); }
+/* The days on screen (the calendar's months, the library's rows): two crop-mark feet at the span's
+   ends, under the focus row, the way crop marks stand at a print's corners. A 2 px rule along the
+   span read as a progress bar, the loudest mark at 1440 (critique round 5, P2-14). */
+.ribbon-visible { position: absolute; bottom: -4px; height: 6px; pointer-events: none; }
+.ribbon-visible::before, .ribbon-visible::after { content: ""; position: absolute; bottom: 0; width: 6px; height: 6px; border: 0 solid var(--ribbon-span); }
+.ribbon-visible::before { left: 0; border-left-width: 1px; border-bottom-width: 1px; }
+.ribbon-visible::after { right: 0; border-right-width: 1px; border-bottom-width: 1px; }
+
+/* The ribbon stays in quiet zones so the photos are the only light (critique rounds 2 and 4):
+   - --ribbon-day: the focus row's baseline under days with a photo. It tells photo from no photo,
+     so it holds 3:1 against the canvas (dark Z5 3.3:1, light Z6 3.4:1; critique round 5, P3-27);
+   - --ribbon-month: the 8 px month ticks, a step louder than the baseline (5.4:1 / 5.7:1);
+   - --ribbon-edge: the month letters, edge print on the canvas (≈ 5.5:1 in both themes);
+   - --ribbon-span: the crop-mark feet under the days on screen (5.4:1 / 3.4:1);
+   - --ribbon-fill: decade coverage.
+   Ink is only for the cursor and the focus-year bracket. */
+:root, :root[data-theme="dark"] { --ribbon-fill: var(--z4); --ribbon-day: var(--z5); --ribbon-month: var(--z6); --ribbon-edge: var(--z6); --ribbon-span: var(--z6); }
+:root[data-theme="light"] { --ribbon-fill: var(--z7); --ribbon-day: var(--z6); --ribbon-month: var(--z5); --ribbon-edge: var(--z5); --ribbon-span: var(--z6); }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --ribbon-fill: var(--z7); --ribbon-day: var(--z6); --ribbon-month: var(--z5); --ribbon-edge: var(--z5); --ribbon-span: var(--z6); }
+}
+/* Increase contrast steps each a zone further from the canvas (dark baseline Z6 5.4:1, light Z5
+   5.7:1), restated with the themes' own specificity so it holds in all four modes (tokens.css). */
+@media (prefers-contrast: more) {
+  :root, :root[data-theme="dark"], :root[data-theme="light"], :root:not([data-theme="dark"]) { --ribbon-day: var(--z6); --ribbon-month: var(--z7); --ribbon-edge: var(--z7); --ribbon-span: var(--z7); }
+  :root[data-theme="light"] { --ribbon-day: var(--z5); --ribbon-month: var(--z4); --ribbon-edge: var(--z4); --ribbon-span: var(--z5); }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --ribbon-day: var(--z5); --ribbon-month: var(--z4); --ribbon-edge: var(--z4); --ribbon-span: var(--z5); }
+}
+
+/* Month letters J F M … D, set like edge print beside each tick (the canvas draws the ticks). */
+.ribbon-months { position: absolute; inset: 0; pointer-events: none; }
+.ribbon-months span {
+  position: absolute; top: 13px; margin-left: 3px;
+  font-family: var(--font-mono); font-size: var(--text-edge); font-stretch: 75%; letter-spacing: var(--tracking-edge); line-height: var(--leading-edge);
+  color: var(--ribbon-edge);
+}
+
+/* The cursor moves by transform. No standing will-change (critique round 5, P3-23): a move repaints
+   a 2 px strip, which costs less than holding a layer for every track on every screen. */
+.ribbon-cursor { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; background: var(--cursor); pointer-events: none; }
+.ribbon-track { position: relative; }
+.ribbon-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ribbon-input:focus-visible + .ribbon-focus-ring { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ribbon-focus-ring { position: absolute; inset: -2px; border-radius: 3px; pointer-events: none; }
+
+/* The loupe: that day's photo at 160 px over a caption in words ("Thu 14 Aug 2014"). */
+.ribbon-loupe {
+  position: absolute; bottom: calc(100% + 10px); transform: translateX(-50%); z-index: 6;
+  display: grid; gap: 6px; justify-items: center; padding: 4px 4px 7px;
+  border-radius: 8px; background: var(--raised); box-shadow: var(--shadow-sheet); pointer-events: none;
+}
+.ribbon-loupe img { width: 160px; height: 160px; object-fit: cover; object-position: 50% 40%; border-radius: var(--r-frame); background: var(--sunken); }
+.ribbon-loupe-date { font-size: var(--text-small); font-weight: var(--weight-medium); color: var(--text-1); font-variant-numeric: tabular-nums; white-space: nowrap; }

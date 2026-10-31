@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged into the bundle's Info.plist by the Tauri bundler (ARCHITECTURE.md §13). -->
+<plist version="1.0">
+<dict>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>FaceTimelapse reads the photos you choose and writes aligned frames and videos where you save them.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>FaceTimelapse reads the photos you choose and writes aligned frames and videos where you save them.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>FaceTimelapse reads the photos you choose and writes aligned frames and videos where you save them.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>FaceTimelapse reads photos from external drives you choose.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>FaceTimelapse reads photos from network drives you choose.</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.photography</string>
+	<!-- Finder/Dock/open launches start with the allocator's large-block cache
+	     off (src-tauri/src/startup.rs), so main() needs no relaunch; only
+	     terminal and dev launches re-exec once. -->
+	<key>LSEnvironment</key>
+	<dict>
+		<key>MallocLargeCache</key>
+		<string>0</string>
+	</dict>
+</dict>
+</plist>

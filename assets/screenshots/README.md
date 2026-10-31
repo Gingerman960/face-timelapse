@@ -1,31 +1,56 @@
 # Screenshot shot list
 
-Drop PNG/JPG screenshots here using the filenames below. `README.md` already references them — once the files exist the repo's README gallery fills in automatically.
+The repository README shows the PNGs in this folder. The file names predate the Tauri rewrite and are kept so links stay stable; each one now shows the screen named below.
 
-## Required
-
-| Filename | Which view | What to capture |
+| File | Screen (ledger row) | What to show |
 |---|---|---|
-| `setup.png` | SetupView (step 1) | Reference photo loaded with crop box visible, aspect ratio buttons showing, source folder chosen. Best with a real portrait. |
-| `scanning.png` | ScanningView (step 2) | Mid-scan with progress bar partway, confirmed/uncertain counters populated, a few thumbnails in the grid. |
-| `daily-selection.png` | DailySelectionView (step 4) | Calendar sidebar with several active days, one day expanded with 2–3 photos in the main panel, one marked Selected. |
-| `results.png` | ResultsView (step 6) | Grid of aligned photos, ~8–20 visible. This is the money shot — pick a timelapse with visible progression. |
-| `video-export.png` | VideoExportModal (from Results → Create Video) | Modal open over the results grid. Both sliders visible with non-default values (e.g., 10 FPS / 30s). Either idle-before-encode **or** mid-encode with the progress bar partially filled — mid-encode is preferred because it shows the live progress UI. |
+| `setup.png` | **Reference** (⌘1) | Reference photo loaded, crop and alignment template visible, an aspect preset other than Free (4:5 or 3:4), the library folder chosen in the inspector. |
+| `scanning.png` | **Scan** (⌘2) | A scan in progress: the status sentence ("Read 2,231 of 3,593 photos"), the tally line, throughput and time left, and the live contact sheet filling in. |
+| `daily-selection.png` | **Days** (⌘4) | Year view with a selected day, the day inspector showing two or three alternates, ideally one moved or excluded day. |
+| `results.png` | **Timelapse** (⌘5) | Player paused on a frame with the photobook caption, filmstrip and decade ribbon. Pick a frame that shows how much time has passed. |
+| `video-export.png` | **Export** sheet (`E` in Timelapse) | Video format, a non-default pace (for example 20 days/s), a crossfade, the date caption on; idle, or mid-encode with the meter partly filled. |
+| `review.png` | **Review** (⌘3) | The keyboard review of an unsure match next to the reference, with the likeness scale. |
+| `results-light.png` | **Timelapse** (⌘5), light theme | The same player as `results.png` in the light theme (the only light shot; the rest of the set is dark). |
 
-## Optional
+## Option A: the real app (preferred for the README)
 
-| Filename | When |
-|---|---|
-| `confirm.png` | ConfirmView with one uncertain photo and the score percentage visible |
+1. Build and run the app with throwaway app data, so the capture session never touches your own:
 
-## Capture tips
+   ```bash
+   npm --prefix ui run app:build -- --debug --no-bundle
+   FT_DATA_DIR="$(mktemp -d)" \
+   FT_DEV_AUTOLOAD="reference=/path/to/reference.jpg;folder=/path/to/photos" \
+     target/debug/facetimelapse
+   ```
 
-- **Size**: native resolution, at least 1440×900. README displays will downscale via markdown width hints.
-- **Format**: PNG preferred for UI. JPG is fine if you need file size < 300KB.
-- **Privacy**: make sure any face visible is yours, a willing friend with consent for public OSS repo, or a model-release stock image. See discussion in CONTRIBUTING.md about biometric data.
-- **OS chrome**: trim the macOS/Windows window title bar if you want a cleaner look, or leave it — both are common.
-- **No dev tools**: close DevTools before capturing. `Cmd+Alt+I` to toggle.
+   `FT_DEV_AUTOLOAD` (debug builds only) preloads the reference and folder; without it, pick them in the app.
+2. Keep the window at its default 1440×900, choose the theme with the Appearance button at the bottom of the sidebar, and walk through scan → review → days → align → export.
+3. Capture only the window, without its shadow: `screencapture -o -iW assets/screenshots/setup.png`, then click the window. (Or ⌘⇧4, Space, and Option-click the window.)
+4. Optionally shrink the files losslessly (for example with `oxipng -o 4`, `brew install oxipng`) and keep each under about 1 MB.
 
-## Once you've added them
+## Option B: synthetic data from the Playwright visual specs
 
-Run `git add assets/screenshots/ && git commit -m "docs: add UI screenshots"`. No code changes needed — the README already points at these paths.
+The UI's visual regression suite renders every screen against the in-memory fake backend with synthetic stand-in portraits (no real faces) at 1024×768, 1440×900 and 1920×1080, in light and dark. Its baselines are ready-made screenshots:
+
+```bash
+cd ui
+npx playwright install chromium                                     # once
+npx playwright test --project=chromium --grep '(light|dark) 1440×900'   # make sure the baselines are current
+cp e2e/__screenshots__/visual.spec.ts/setup-1440-dark-darwin.png            ../assets/screenshots/setup.png
+cp e2e/__screenshots__/visual.spec.ts/days-1440-dark-darwin.png             ../assets/screenshots/daily-selection.png
+cp e2e/__screenshots__/visual.spec.ts/timelapse-player-1440-dark-darwin.png ../assets/screenshots/results.png
+cp e2e/__screenshots__/visual.spec.ts/export-1440-dark-darwin.png           ../assets/screenshots/video-export.png
+```
+
+A live scan is not a stable baseline, so it is captured on request: `FT_SHOOT_STATES=1 npx playwright test --project=chromium --grep 'job states'` writes `e2e/__screenshots__/states/scan-live-1440-<theme>.png` (and the aligning state), which can become `scanning.png`. Other baselines: `review-*`, `scan-library-*`, `timelapse-onion-*`, `timelapse-sheet-*`, `setup-empty-*`.
+
+These images show the UI faithfully but not real photos, so prefer Option A for the README once you have photos you can publish.
+
+## Rules
+
+- **Privacy:** every face in a published screenshot must be yours, someone who agreed to appear in a public open-source repository, or a model-released stock image. Never capture someone else's photo library, and never commit the photos themselves. This folder holds screenshots only.
+- **Size:** native Retina captures of a 1440×900 window are fine; the README scales them down.
+- **Format:** PNG for UI. Use one theme across the set (dark matches the social preview); `results-light.png` is the one deliberate light-theme shot.
+- **Clean state:** no DevTools, no debug overlays, no personal paths visible in the caption line or inspector, if possible.
+
+When the files are in place, commit them together, for example with `docs: update screenshots for FaceTimelapse 2`. The README already points at these paths.
