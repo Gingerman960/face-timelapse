@@ -45,7 +45,26 @@ const COMMANDS: &[&str] = &[
 fn main() {
     tauri_build::try_build(
         tauri_build::Attributes::new()
-            .app_manifest(tauri_build::AppManifest::new().commands(COMMANDS)),
+            .app_manifest(tauri_build::AppManifest::new().commands(COMMANDS))
+            .windows_attributes(windows_attributes()),
     )
     .expect("failed to run tauri-build");
+}
+
+/// Windows (MSVC): the application manifest (Common Controls v6, which the
+/// dialogs need) is embedded by the linker into every executable of this
+/// package, test binaries included. tauri-build's own copy reaches only the
+/// app, and a test binary without it does not start
+/// (`STATUS_ENTRYPOINT_NOT_FOUND`: `TaskDialogIndirect` is not in comctl32 v5).
+fn windows_attributes() -> tauri_build::WindowsAttributes {
+    let target = |key: &str| std::env::var(key).unwrap_or_default();
+    if target("CARGO_CFG_TARGET_OS") != "windows" || target("CARGO_CFG_TARGET_ENV") != "msvc" {
+        return tauri_build::WindowsAttributes::new();
+    }
+    let manifest =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("windows-app-manifest.xml");
+    println!("cargo:rerun-if-changed={}", manifest.display());
+    println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
+    println!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest.display());
+    tauri_build::WindowsAttributes::new_without_app_manifest()
 }
