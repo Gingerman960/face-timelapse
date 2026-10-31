@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-review-decision"
+description = "Enables the set_review_decision command without any pre-configured scope."
+commands.allow = ["set_review_decision"]
+
+[[permission]]
+identifier = "deny-set-review-decision"
+description = "Denies the set_review_decision command without any pre-configured scope."
+commands.deny = ["set_review_decision"]

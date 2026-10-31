@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-look"
+description = "Enables the set_look command without any pre-configured scope."
+commands.allow = ["set_look"]
+
+[[permission]]
+identifier = "deny-set-look"
+description = "Denies the set_look command without any pre-configured scope."
+commands.deny = ["set_look"]

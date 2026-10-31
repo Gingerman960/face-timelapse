@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-select-day-photo"
+description = "Enables the select_day_photo command without any pre-configured scope."
+commands.allow = ["select_day_photo"]
+
+[[permission]]
+identifier = "deny-select-day-photo"
+description = "Denies the select_day_photo command without any pre-configured scope."
+commands.deny = ["select_day_photo"]

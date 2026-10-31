@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-day-excluded"
+description = "Enables the set_day_excluded command without any pre-configured scope."
+commands.allow = ["set_day_excluded"]
+
+[[permission]]
+identifier = "deny-set-day-excluded"
+description = "Denies the set_day_excluded command without any pre-configured scope."
+commands.deny = ["set_day_excluded"]

@@ -1,0 +1,137 @@
+/* Design-system components. Every interactive part has hover, focus-visible,
+   active and disabled states; disabled always carries a reason (title). */
+
+.btn-plate, .btn-quiet, .btn-stop {
+  height: var(--control-h);
+  display: inline-flex; align-items: center; gap: var(--s2);
+  padding: 0 var(--s4);
+  border: 0; border-radius: var(--r-pill);
+  font-size: var(--text-ui); font-weight: var(--weight-strong); letter-spacing: var(--tracking-ui); white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-press) var(--ease-standard), opacity var(--dur-fast);
+}
+.btn-plate { background: var(--plate); color: var(--plate-ink); padding-right: 12px; }
+.btn-plate:hover:not(:disabled) { background: var(--plate-hover); }
+.btn-plate kbd, .btn-stop kbd { border: 0; padding: 0; color: inherit; opacity: 0.78; }
+.btn-plate.wide { width: 100%; justify-content: space-between; height: 36px; }
+.btn-quiet { background: var(--quiet-fill); color: var(--text-1); box-shadow: inset 0 0 0 var(--hair) var(--quiet-ring), var(--shadow-control); padding: 0 14px; font-weight: var(--weight-medium); }
+.btn-quiet:hover:not(:disabled) { background: color-mix(in oklch, var(--quiet-fill), var(--text-1) 6%); }
+.btn-quiet .icon { color: var(--text-2); }
+.btn-quiet kbd { border: 0; padding: 0; color: var(--text-2); }
+.btn-stop { background: var(--stop); color: var(--stop-ink); }
+.btn-plate:active:not(:disabled), .btn-quiet:active:not(:disabled), .btn-stop:active:not(:disabled) { transform: scale(0.97); }
+.btn-plate:disabled, .btn-quiet:disabled, .btn-stop:disabled { opacity: 0.38; }
+
+.btn-icon {
+  width: var(--control-h); height: var(--control-h);
+  display: inline-grid; place-items: center; flex: none;
+  border: 0; border-radius: var(--r-pill);
+  background: transparent; color: var(--text-2);
+  transition: background-color var(--dur-fast), color var(--dur-fast), transform var(--dur-press);
+}
+.btn-icon:hover:not(:disabled) { background: var(--hover); color: var(--text-1); }
+.btn-icon:active:not(:disabled) { background: var(--pressed); transform: scale(0.94); }
+.btn-icon:disabled { opacity: 0.38; }
+.btn-icon.sm { width: var(--control-h-sm); height: var(--control-h-sm); }
+.btn-icon[aria-pressed="true"] { color: var(--text-1); background: var(--pressed-fill); box-shadow: inset 0 0 0 1px var(--pressed-ring); }
+
+.btn-text {
+  border: 0; background: none; padding: 0; color: var(--text-2); font-size: var(--text-ui);
+  text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px;
+}
+.btn-text:hover { color: var(--text-1); text-decoration-color: currentColor; }
+
+.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--sunken); box-shadow: inset 0 0 0 var(--hair) var(--line); }
+.segmented button {
+  height: 24px; padding: 0 12px; border: 0; border-radius: var(--r-pill);
+  background: transparent; color: var(--text-2);
+  font-size: var(--text-ui); font-weight: var(--weight-medium); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background-color var(--dur-fast), color var(--dur-fast), transform var(--dur-press);
+}
+.segmented button:hover { color: var(--text-1); }
+.segmented button[aria-checked="true"] { background: var(--pressed-fill); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--pressed-ring); }
+.segmented button:disabled { opacity: 0.4; }
+.segmented .icon { width: 14px; height: 14px; }
+
+.chip {
+  height: 26px; padding: 0 10px; border: 0; border-radius: var(--r-pill);
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; color: var(--text-2); box-shadow: inset 0 0 0 var(--hair) var(--line-strong);
+  font-size: var(--text-small); font-weight: var(--weight-medium); white-space: nowrap;
+  transition: background-color var(--dur-fast), color var(--dur-fast), transform var(--dur-press);
+}
+.chip:hover:not(:disabled) { color: var(--text-1); background: var(--hover); }
+.chip:active:not(:disabled), .segmented button:active:not(:disabled):not([aria-checked="true"]), .chips button:active:not(:disabled) { background: var(--pressed); transform: scale(0.97); }
+.chip kbd { border: 0; padding: 0; }
+.chip .icon { width: 14px; height: 14px; }
+/* A pressed toggle (chips, transport toggles, Compare, icon toggles): the lit fill, ink label and
+   icon, a 1 px ink ring (critique round 3: one "on" style app-wide). */
+.chip[aria-pressed="true"] { background: var(--pressed-fill); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--pressed-ring), var(--shadow-control); }
+.chip[aria-pressed="true"] .icon { color: var(--text-1); }
+.chip[aria-pressed="true"] kbd { color: var(--text-2); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chips button {
+  height: 26px; padding: 0 10px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-2);
+  box-shadow: inset 0 0 0 var(--hair) var(--line-strong); font-family: var(--font-mono); font-size: var(--text-label); font-stretch: 87.5%;
+}
+.chips button:hover:not(:disabled) { color: var(--text-1); }
+.chips button[aria-checked="true"] { background: var(--pressed-fill); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--pressed-ring); }
+.chips button:disabled { opacity: 0.4; text-decoration: line-through; text-decoration-color: var(--text-3); }
+
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); position: relative; }
+.switch-row > span { display: grid; gap: 2px; font-weight: var(--weight-medium); }
+.switch-row .field-help { grid-column: auto; }
+.switch-row input { position: absolute; opacity: 0; width: 34px; height: 20px; right: 0; margin: 0; }
+.switch-row > i { width: 34px; height: 20px; border-radius: 20px; background: var(--line-strong); position: relative; flex: none; transition: background-color var(--dur-fast); }
+.switch-row > i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: oklch(99% 0 0); box-shadow: 0 1px 2px oklch(0% 0 0 / 0.3); transition: transform var(--dur-base) var(--ease-out); }
+.switch-row input:checked + i { background: var(--text-1); }
+.switch-row input:checked + i::after { transform: translateX(14px); background: var(--canvas); }
+.switch-row input:focus-visible + i { outline: 2px solid var(--focus); outline-offset: 2px; }
+.switch-row input:disabled + i { opacity: 0.4; }
+
+.num { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 6px; border-radius: var(--r-control); background: var(--sunken); box-shadow: inset 0 0 0 var(--hair) var(--line-strong); }
+.num input { width: 58px; border: 0; background: transparent; text-align: right; font-family: var(--font-mono); font-stretch: 87.5%; font-size: var(--text-small); color: var(--text-1); padding: 0; }
+.num input:focus-visible { outline: none; }
+.num:focus-within { box-shadow: inset 0 0 0 var(--hair) var(--line-strong), 0 0 0 2px var(--focus); }
+.num span { font-size: var(--text-small); color: var(--text-2); }
+.num[data-invalid="true"] { box-shadow: inset 0 0 0 1px var(--stop); }
+
+.meter { height: 2px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.meter > i { display: block; height: 100%; background: var(--text-1); transform-origin: 0 50%; transform: scaleX(var(--p, 0)); transition: transform var(--dur-base) var(--ease-standard); }
+
+.facts { display: grid; gap: 7px; }
+.facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); min-width: 0; }
+.facts dt { color: var(--text-2); font-size: var(--text-ui); white-space: nowrap; }
+.facts dd { font-size: var(--text-small); color: var(--text-1); text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.notice { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: var(--s3); align-items: start; padding: 11px 14px; border-radius: 12px; }
+.notice > .icon { margin-top: 1px; }
+.notice strong { font-weight: var(--weight-strong); }
+.notice p { color: var(--text-2); }
+.notice-stop { background: var(--stop-soft); }
+.notice-stop > .icon { color: var(--stop); }
+.notice-safelight { background: var(--safelight-soft); }
+.notice-safelight > .icon { color: var(--safelight); }
+
+.row { display: flex; align-items: center; gap: var(--s3); }
+.row.end { justify-content: flex-end; }
+
+svg.mark { color: var(--mark); overflow: visible; pointer-events: none; }
+svg.mark.neutral { color: var(--cursor); }
+svg.mark.big { width: 56px; height: 44px; }
+
+.empty-hint { display: grid; place-items: center; gap: var(--s2); padding: var(--s8); color: var(--text-2); text-align: center; }
+
+/* The backend refused the edited video settings (v1.5): the reason, in stop red with its icon
+   (export sheet and the transport's pace popover). */
+.video-save-error { display: flex; align-items: flex-start; gap: 6px; font-size: var(--text-small); line-height: var(--leading-small); color: var(--stop); }
+.video-save-error .icon { flex: none; width: 14px; height: 14px; margin-top: 1px; }
+
+/* A screen that stopped working (UI review 2, M7): calm, centred in the screen, the error as small print. */
+.crash { height: 100%; display: grid; align-content: center; justify-items: center; gap: var(--s3); padding: var(--s8); text-align: center; }
+.crash-icon { width: 28px; height: 28px; color: var(--stop); }
+.crash h2 { font-size: var(--text-title); font-weight: var(--weight-strong); letter-spacing: var(--tracking-title); }
+.crash > p:not(.crash-detail) { max-width: 46ch; color: var(--text-2); line-height: var(--leading-prose); }
+.crash .row { margin-top: var(--s2); }
+.crash-detail { max-width: 64ch; margin-top: var(--s4); color: var(--text-3); overflow-wrap: anywhere; }

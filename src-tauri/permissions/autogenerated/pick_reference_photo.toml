@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pick-reference-photo"
+description = "Enables the pick_reference_photo command without any pre-configured scope."
+commands.allow = ["pick_reference_photo"]
+
+[[permission]]
+identifier = "deny-pick-reference-photo"
+description = "Denies the pick_reference_photo command without any pre-configured scope."
+commands.deny = ["pick_reference_photo"]

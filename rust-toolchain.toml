@@ -1,0 +1,8 @@
+# Pinned Rust toolchain for builds, CI and releases (reproducible binaries).
+# The crates' minimum supported version stays `rust-version` in Cargo.toml.
+# Bump deliberately, together with RUST_TOOLCHAIN in .github/workflows/*.yml
+# (CI fails if they differ).
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

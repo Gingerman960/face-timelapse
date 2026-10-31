@@ -1,0 +1,76 @@
+[package]
+name = "facetimelapse-e2e"
+description = "Test-only GUI harness for FaceTimelapse: drives the real webview from a local JSONL script (linked only with the app's `e2e` feature in debug-assertion builds)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+tauri = "2.12.5"
+serde.workspace = true
+serde_json.workspace = true
+log = "0.4.34"
+parking_lot = "0.12"
+
+# Native gestures, snapshots and own-window recordings (in-process
+# AppKit/WebKit/CoreGraphics calls only: no CGEventPost, no screen-recording
+# or accessibility APIs).
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6.5"
+block2 = "0.6.2"
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+  "std",
+  "NSArray",
+  "NSData",
+  "NSDictionary",
+  "NSError",
+  "NSGeometry",
+  "NSObjCRuntime",
+  "NSObject",
+  "NSProcessInfo",
+  "NSString",
+  "NSValue",
+] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+  "std",
+  "objc2-core-foundation",
+  "objc2-core-graphics",
+  "NSApplication",
+  "NSBitmapImageRep",
+  "NSCursor",
+  "NSEvent",
+  "NSGraphicsContext",
+  "NSImage",
+  "NSImageRep",
+  "NSResponder",
+  "NSScreen",
+  "NSView",
+  "NSWindow",
+] }
+objc2-web-kit = { version = "0.3.2", default-features = false, features = [
+  "std",
+  "block2",
+  "objc2-app-kit",
+  "objc2-core-foundation",
+  "WKContentWorld",
+  "WKFrameInfo",
+  "WKSnapshotConfiguration",
+  "WKWebView",
+] }
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFCGTypes"] }
+objc2-core-graphics = { version = "0.3.2", default-features = false, features = [
+  "std",
+  "CGDataProvider",
+  "CGEvent",
+  "CGEventSource",
+  "CGEventTypes",
+  "CGImage",
+  "CGWindow",
+] }
+
+[lints.clippy]
+unwrap_used = "warn"

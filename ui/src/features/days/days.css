@@ -1,0 +1,180 @@
+/* Days: a calendar where every day is its photo. */
+
+.days { display: flex; height: 100%; }
+.days-canvas { flex: 1; min-width: 0; overflow: auto; padding: 0 var(--s7) var(--s6); position: relative; mask-image: linear-gradient(to bottom, transparent 0, #000 18px); -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px); }
+/* The head (critique round 3): the numeral and the legend share the first row, the summary has a row
+   of its own, so a longer summary ("· 4 left out") never pushes the legend down or the months with it. */
+.year-head { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "year legend" "sum sum"; align-items: center; gap: var(--s1) var(--s4); margin: 0 0 var(--s4); padding-top: 4px; }
+.year-head .year-num { grid-area: year; white-space: nowrap; }
+.year-head .year-sum { grid-area: sum; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.year-num { font-size: var(--text-display); font-weight: var(--weight-display); letter-spacing: var(--tracking-display); line-height: var(--leading-display); font-variant-numeric: tabular-nums; }
+.legend { grid-area: legend; justify-self: end; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s1) var(--s4); font-size: var(--text-label); color: var(--text-2); }
+.legend li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.legend i { width: 12px; height: 12px; border-radius: 2px; position: relative; display: inline-block; background: var(--z5); }
+.legend .lg-alt::after { content: ""; position: absolute; top: 0; right: 0; width: 6px; height: 6px; background: linear-gradient(to bottom left, var(--canvas) 50%, var(--fold-back) 50%); }
+.legend .lg-mine::after { content: ""; position: absolute; left: 1px; right: 1px; bottom: -4px; height: 2px; border-radius: 2px; background: var(--mark); }
+.legend .lg-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.legend .lg-out { background: repeating-linear-gradient(135deg, transparent 0 2px, var(--text-2) 2px 3px); box-shadow: inset 0 0 0 1px var(--line-strong); }
+
+.year-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s5) var(--s6); }
+/* Cells sized to the canvas's height leave width to spare (1920): the year lies centred as one sheet
+   on the table, and its head is as wide, so the legend ends where December does (critique round 5, P1-5). */
+.year-grid[data-sheet] { justify-content: center; }
+.days-canvas[data-sheet] > .year-head { max-width: var(--sheet-w); margin-inline: auto; }
+.month { display: grid; gap: 5px; align-content: start; content-visibility: auto; contain-intrinsic-size: auto 220px; }
+/* The months before the library's first photo or after its last: one quiet line, not empty grids (P1-2). */
+.months-outside { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--s3); font-size: var(--text-label); color: var(--text-3); }
+.months-outside::after { content: ""; flex: 1; height: var(--hair); background: var(--line); }
+.month-head { display: flex; justify-content: space-between; align-items: baseline; }
+.month-head .label-caps { color: var(--text-1); }
+.month-head .mono-meta { color: var(--text-3); font-size: var(--text-label); }
+.wd, .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.month-days { display: grid; gap: 2px; }
+.wd span { font-size: var(--text-label); font-stretch: var(--width-condensed); font-weight: var(--weight-medium); color: var(--text-3); text-align: center; }
+.day { position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: var(--r-cell); background: var(--sunken); overflow: visible; cursor: default; }
+.day .face { position: absolute; inset: 0; overflow: hidden; border-radius: var(--r-cell); }
+/* Hover lifts the print with a sheen on its own layer: opacity only, never a filter (critique round 5, P3-24). */
+:is(.day, .wk[data-day]) .face::before { content: ""; position: absolute; inset: 0; z-index: 1; background: oklch(100% 0 0 / 0.12); opacity: 0; transition: opacity var(--dur-fast) var(--ease-standard); pointer-events: none; }
+:is(.day, .wk[data-day]):hover .face::before { opacity: 1; }
+/* Blank grid positions stay in the accessibility tree (column order), but draw nothing. */
+.day.pad { background: transparent; }
+.day.out-of-range { background: transparent; }
+.day.empty { background: transparent; box-shadow: inset 0 0 0 1px var(--line); font-family: var(--font-mono); font-size: var(--text-label); font-stretch: 75%; color: var(--text-3); display: grid; place-items: center; }
+.day.has-alts::after { content: ""; position: absolute; top: 0; right: 0; width: 7px; height: 7px; border-top-right-radius: var(--r-cell); background: linear-gradient(to bottom left, var(--canvas) 50%, var(--fold-back) 50%); z-index: 1; }
+.day.mine::before { content: ""; position: absolute; left: 2px; right: 2px; bottom: -3px; height: 2px; border-radius: 2px; background: var(--mark); }
+/* A left-out day's pick isn't in the timelapse, so it carries no chinagraph mark (critique round 2). */
+.day.excluded.mine::before { content: none; }
+.day.excluded .face img { opacity: 0.3; }
+.day.excluded .face::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--text-2) 3px 4px); opacity: 0.6; }
+.day svg.mark { position: absolute; inset: -5px; width: calc(100% + 10px); height: calc(100% + 10px); z-index: 2; color: var(--cursor); }
+.day[data-over="true"] { box-shadow: 0 0 0 2px var(--mark); z-index: 2; }
+.day[data-over="true"] .face img { opacity: 0.55; }
+.day[data-source="true"] .face img { opacity: 0.3; }
+.day:focus-visible { outline-offset: 1px; z-index: 3; }
+/* A run of days (⇧-click, ⇧←/⇧→; critique round 6, P1-4): every day of it carries the selection's ink as a
+   hairline frame inside the cell, so the run reads as one strip of marked prints; the active day keeps its loop. */
+.day[data-run="true"] { outline: 1.5px solid var(--cursor); outline-offset: -1.5px; z-index: 1; }
+
+.month-view { display: grid; gap: var(--s3); max-width: 980px; }
+.month-view .month-days, .month-view .week { gap: 6px; }
+.month-view .wd span { font-size: var(--text-label); }
+.month-view .day .day-num { position: absolute; left: 5px; top: 4px; z-index: 2; font-family: var(--font-mono); font-size: var(--text-label); font-stretch: 75%; color: var(--on-photo-ink); text-shadow: var(--on-photo-glow); }
+.month-view .day.empty .day-num { position: static; color: var(--text-3); text-shadow: none; }
+.month-view .day .alt-count { position: absolute; right: 4px; bottom: 4px; z-index: 2; padding: 1px 6px; border-radius: var(--r-pill); background: var(--on-photo-shade); color: var(--on-photo-ink); font-size: var(--text-label); font-weight: var(--weight-strong); font-variant-numeric: tabular-nums; }
+.month-view .day .alt-count::after { content: attr(data-count); }
+
+/* Month zoom: a day's alternates lie fanned out under its chosen print, like
+   prints on a light table. The chosen face steps in a little so the corners of
+   up to two turned prints show; transforms only, no layout. */
+.month-view .day.fanned { --fan-inset: 8%; background: transparent; }
+.month-view .day.fanned > .face { inset: var(--fan-inset); z-index: 1; box-shadow: var(--shadow-print), 0 2px 6px -2px oklch(0% 0 0 / 0.45); }
+.month-view .day .fan-card { position: absolute; inset: var(--fan-inset); border-radius: var(--r-cell); overflow: hidden; background: var(--sunken); box-shadow: var(--shadow-print); }
+.month-view .day .fan-card .face { border-radius: inherit; }
+.month-view .day .fan-card img { filter: brightness(0.82) saturate(0.85); }
+.month-view .day .fan-card[data-fan="0"] { transform: translate(-3%, 2%) rotate(-6deg); }
+.month-view .day .fan-card[data-fan="1"] { transform: translate(4%, -2%) rotate(5deg); }
+.month-view .day.fanned::after { top: var(--fan-inset); right: var(--fan-inset); z-index: 2; }
+.month-view .day.fanned .day-num { left: calc(var(--fan-inset) + 4px); top: calc(var(--fan-inset) + 3px); }
+.month-view .day.fanned .alt-count { right: calc(var(--fan-inset) + 4px); bottom: calc(var(--fan-inset) + 4px); }
+
+/* Decade zoom (P2-10): a contact strip of weekly faces per year. Week columns
+   start on 1 January in every year, so the month hairlines run straight down
+   through the decade. */
+.decade-view { --wk-gap: 2px; --row-gap: 8px; display: grid; gap: var(--row-gap); padding-top: var(--s2); }
+.decade-head, .decade-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; column-gap: var(--s3); }
+.decade-months, .decade-weeks { display: grid; grid-template-columns: repeat(var(--wk-cols, 53), minmax(0, 1fr)); gap: var(--wk-gap); }
+.decade-months span { font-family: var(--font-mono); font-stretch: 75%; font-size: var(--text-label); color: var(--text-3); white-space: nowrap; }
+.decade-year { justify-self: start; padding: 4px 0; border: 0; background: transparent; color: var(--text-1); font-size: var(--text-small); }
+.decade-year[aria-current="true"]::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--cursor); margin-right: 6px; vertical-align: 1px; }
+.wk { position: relative; aspect-ratio: 1; border-radius: 1.5px; background: var(--sunken); }
+.wk .face { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
+.wk.out { background: transparent; }
+.wk.empty { background: transparent; box-shadow: inset 0 0 0 var(--hair) var(--line); }
+.wk.excluded .face img { opacity: 0.3; }
+.wk.excluded .face::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--text-2) 3px 4px); opacity: 0.6; }
+.wk[data-month-start]::before { content: ""; position: absolute; left: calc(var(--wk-gap) / -2 - 0.5px); top: calc(var(--row-gap) / -2); bottom: calc(var(--row-gap) / -2); width: 1px; background: var(--line); pointer-events: none; }
+.wk[data-day] { cursor: pointer; }
+.wk[data-day]:hover { z-index: 1; box-shadow: 0 0 0 1.5px var(--text-1); }
+
+.day-head, .run-head { display: grid; gap: 4px; }
+.day-date, .run-dates { font-size: var(--text-heading); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); line-height: var(--leading-heading); }
+.day-sub { font-size: var(--text-ui); color: var(--text-2); }
+.alts { display: grid; gap: 4px; margin: 0 calc(var(--s2) * -1); }
+/* One photo of the day: the card holds the radio and, for a photo taken after midnight, its note (P2-8). */
+/* The radio (.alt) is laid over the whole card; what the card shows sits under it, for the eye only, and lets
+   the pointer through, except the after-midnight move, which sits above it (critique round 5, P2-19). */
+.alt-card { position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr) auto 16px; gap: var(--s3); align-items: center; padding: 8px; border-radius: var(--r-card); transition: background-color var(--dur-fast); }
+.alt-card > :not(.alt) { pointer-events: none; }
+.alt-card:hover:has(.alt:not(:disabled)) { background: var(--hover); }
+.alt-card:active:has(.alt:not(:disabled)) { background: var(--pressed); }
+.alt-card[data-chosen="true"] { background: var(--selected-row); }
+.alt { position: absolute; inset: 0; padding: 0; border: 0; border-radius: inherit; background: transparent; color: inherit; touch-action: none; }
+/* The card's third line, under the likeness: "Taken after midnight · Move to 14 Sep". Where the column is too
+   narrow, the move wraps whole onto a line of its own; it was cut to an ellipsis, link and all, at 1440. */
+.alt-note { display: flex; flex-wrap: wrap; column-gap: 0.3em; font-size: var(--text-label); color: var(--text-2); }
+.alt-note > * { white-space: nowrap; }
+.alt-note .btn-text { position: relative; z-index: 1; font-size: inherit; pointer-events: auto; }
+.alt-img { position: relative; width: 64px; height: 64px; }
+.alt-img .face { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; }
+.alt-img svg.mark { position: absolute; inset: -5px; width: 74px; height: 74px; }
+.alt-meta { display: grid; gap: 1px; min-width: 0; }
+.alt-meta strong { font-size: var(--text-ui); font-weight: var(--weight-strong); font-variant-numeric: tabular-nums; }
+/* Chinagraph red, pulled 15 % toward the text colour so 11.5 px reads at 4.5:1 on the selected row in both themes. */
+.chosen-label { font-size: var(--text-label); font-weight: var(--weight-strong); color: color-mix(in oklch, var(--mark) 85%, var(--text-1)); margin-top: 2px; }
+/* The pick of a left-out day is not in the timelapse: no chinagraph red (M7). text-2, as text-3 is under 4.5:1 on the dark selected row. */
+.chosen-label.out { color: var(--text-2); font-weight: var(--weight-medium); }
+.alt-card > kbd { justify-self: end; }
+.grip { color: var(--text-3); width: 14px; height: 14px; cursor: grab; }
+.neighbours { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 15px 3px 3px; background: var(--rebate); border-radius: 1.5px; }
+/* Five prints at the frame's own aspect, the aligned frames once they exist (critique round 4). */
+.neighbours > button { position: relative; aspect-ratio: var(--frame-ar, 3 / 4); padding: 0; border: 0; background: color-mix(in oklch, var(--rebate), var(--z10) 4%); border-radius: 1px; }
+.neighbours .print { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 1px; }
+.neighbours .now { box-shadow: 0 0 0 1.5px var(--rebate), 0 0 0 3px var(--cursor); }
+.neighbours .edge { position: absolute; left: 1px; top: -13px; }
+/* Move mode: a neutral glass strip floating over the bottom of the calendar
+   (sticky, last in flow), so it never reflows the months (critique round 2). */
+.move-banner {
+  position: sticky; bottom: var(--s4); z-index: 3; width: fit-content; max-width: 100%; margin: var(--s4) auto 0;
+  padding: 8px 14px; border-radius: var(--r-pill); background: var(--glass); -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-sheet); font-size: var(--text-ui); line-height: var(--leading-prose); text-align: center;
+}
+/* Alignment settings: labelled rows in the popover, values on the trigger (P2-12). */
+.render-row { display: grid; gap: 6px; }
+.render-label { font-size: var(--text-small); font-weight: var(--weight-strong); color: var(--text-2); }
+.render-trigger { gap: 6px; }
+.render-trigger .mono-values { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.move-banner kbd { margin: 0 2px; }
+
+.drag-ghost { display: grid; justify-items: start; gap: 6px; pointer-events: none; }
+.drag-ghost .face { position: relative; width: 64px; height: 64px; overflow: hidden; border-radius: 4px; transform: rotate(-4deg); box-shadow: var(--shadow-sheet); }
+.drag-ghost .label-caps { padding: 4px 8px; border-radius: var(--r-pill); background: var(--plate); color: var(--plate-ink); }
+
+/* Toolbar centre: the stepper's label keeps one width ("2014" and "Sep 2014"), so the zoom control never moves (QA 12). */
+.days-nav .stepper-value { inline-size: 9ch; min-width: 0; }
+
+@media (max-width: 1180px) {
+  .year-grid { gap: var(--s4) var(--s5); }
+  .legend { display: none; }
+  .days-canvas { padding: 0 var(--s5) var(--s5); }
+}
+
+/* The pick just made (critique round 4): the chinagraph underline is written left to right by the
+   pen, once; picks that were already there just sit. Reduced motion: a short fade. */
+.day.mine[data-just="true"]::before { transform-origin: left center; animation: ft-pen-line var(--dur-pen) var(--ease-out) both; }
+@keyframes ft-pen-line { from { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .day.mine[data-just="true"]::before { animation: ft-fade 120ms linear both; }
+}
+
+/* The print becomes the film (signature moment 3; critique round 5, P1-2): the selected day's
+   aligned frame lies over its cell, shown only while a screen change runs (html.vt). It is named by
+   its day (base.css), as the player's frame is, so the same picture grows into the player and back,
+   at matching centred crops. When the change ends it hands back to the face crop in one cross-fade. */
+.day > .vt-print { position: absolute; inset: 0; z-index: 1; overflow: hidden; border-radius: var(--r-cell); opacity: 0; pointer-events: none; transition: opacity var(--dur-xfade) var(--ease-out); }
+.month-view .day.fanned > .vt-print { inset: var(--fan-inset); }
+.day > .vt-print img { width: 100%; height: 100%; object-fit: cover; }
+:root.vt .day > .vt-print { opacity: 1; transition: none; }
+/* A month freshly laid out may still be skipped (content-visibility) when the transition captures it: the
+   selected day's month always renders while a transition runs, so its print can be paired. */
+:root.vt .month:has(.vt-print) { content-visibility: visible; }
+.days-notice { position: sticky; top: 0; z-index: 4; padding: var(--s3) 0 var(--s2); background: var(--canvas); }

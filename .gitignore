@@ -1,15 +1,32 @@
+# Rust (Cargo workspace build output, incl. cargo-llvm-cov data)
+/target/
+*.profraw
+*.profdata
+
+# Frontend (ui/): dependencies, Vite build, test output
 node_modules/
 dist/
-models/
-release/
+*.tsbuildinfo
+ui/test-results/
+ui/playwright-report/
+ui/blob-report/
+ui/playwright/.cache/
 
-# Build artifacts
+# Coverage (Vitest writes ui/coverage/, CI writes coverage/)
+coverage/
+lcov.info
+
+# ONNX models: fetched by scripts/fetch-models.sh, never committed
+models/
+
+# Installers / bundles built locally
 *.dmg
 *.exe
+*.msi
 *.zip
 *.AppImage
 *.deb
-*.snap
+*.rpm
 
 # Environment / editor
 .env
@@ -18,8 +35,11 @@ release/
 .vscode/
 *.log
 
-# Test output
-coverage/
+# Local tool state
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/config.local.json
+.claude/settings.local.json
 
 # OS
 .DS_Store

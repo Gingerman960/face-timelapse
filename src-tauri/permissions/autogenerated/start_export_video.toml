@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-start-export-video"
+description = "Enables the start_export_video command without any pre-configured scope."
+commands.allow = ["start_export_video"]
+
+[[permission]]
+identifier = "deny-start-export-video"
+description = "Denies the start_export_video command without any pre-configured scope."
+commands.deny = ["start_export_video"]

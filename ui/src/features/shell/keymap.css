@@ -1,0 +1,109 @@
+/* Keys: the exposure-record card (critique round 5, P2-13). "?" lays it on the table over any
+   screen: a raised sheet ruled like a darkroom log. The screen's keys fill the wide column, the
+   keys that work everywhere sit in the margin column, and each column's rows are grouped by
+   intent, the group's name in the left margin like a log's row heading. It arrives in 220 ms on
+   --ease-out (fade and an 8 px rise) and leaves in 150 ms on --ease-in, back down (presence.ts),
+   inert from its first frame. Reduced motion: both are fades. */
+
+.keymap-layer {
+  /* Over everything that can hold the screen, the F viewer (50) and its lifted frame (51)
+     included (critique round 6, P1-3); under the toasts (60) and a file drop (70). */
+  position: fixed; inset: 0; z-index: 55;
+  /* One track the size of the window, so the card's max-height has a height to hold to (it scrolls inside). */
+  display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center;
+  /* A little more room below than above: the card sits at the optical centre. */
+  padding: var(--s8) var(--s6) var(--s9);
+}
+/* Lighter than the export sheet's scrim: the screen the keys belong to stays readable behind. */
+.keymap-scrim {
+  position: absolute; inset: 0;
+  background: color-mix(in oklch, var(--canvas) 56%, transparent);
+  animation: ft-fade var(--dur-base) var(--ease-standard) both;
+}
+
+.keymap {
+  --km-margin: 52px;  /* the log's left margin, where each group's name is written */
+  position: relative;
+  width: min(800px, 100%); max-height: 100%;
+  overflow: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: auto auto auto;
+  align-items: start; column-gap: var(--s7);
+  padding: var(--s5) var(--s6) var(--s4);
+  border-radius: var(--r-sheet); background: var(--raised); box-shadow: var(--shadow-sheet);
+  animation: km-in var(--dur-base) var(--ease-out) both;
+}
+@keyframes km-in { from { opacity: 0; transform: translateY(8px) scale(0.985); } }
+/* Over the export sheet only the sheet's own keys work: one column, a narrower card. */
+.keymap[data-single] { width: min(440px, 100%); grid-template-columns: minmax(0, 1fr); }
+
+/* ── The record's head: a strong rule under the title and under the margin column's name ── */
+.km-title, .km-col-head {
+  grid-row: 1; align-self: end;
+  padding-bottom: var(--s3); border-bottom: var(--hair) solid var(--line-strong);
+  line-height: var(--leading-tight);
+}
+.km-title {
+  grid-column: 1; padding-right: var(--s7);
+  font-size: var(--text-title); font-weight: var(--weight-strong); letter-spacing: var(--tracking-title);
+  text-wrap: balance;
+}
+.km-dot { color: var(--text-3); font-weight: var(--weight-regular); }
+.km-where { color: var(--text-2); font-weight: var(--weight-regular); }
+.km-col-head { font-size: var(--text-ui); font-weight: var(--weight-strong); color: var(--text-2); }
+/* Level with the title's line, at the card's corner. */
+.km-close { position: absolute; top: calc(var(--s5) - 3px); right: var(--s4); }
+
+/* ── The columns ── */
+.km-screen { grid-column: 1; grid-row: 2; }
+/* The margin column shares the title's row for its name and the rows' row for its entries. */
+.km-everywhere { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-rows: subgrid; }
+.km-everywhere > .km-col-head { grid-row: 1; }
+.km-everywhere > .km-groups { grid-row: 2; }
+
+/* One column grid per section, so every row's caps and words line up across its groups. */
+.km-groups {
+  display: grid; grid-template-columns: var(--km-margin) max-content minmax(0, 1fr);
+  column-gap: var(--s3); align-content: start;
+}
+.km-group {
+  grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline;
+  padding: var(--s2) 0 var(--s3); border-top: var(--hair) solid var(--line);
+}
+.km-group:first-child { border-top: 0; padding-top: var(--s3); }
+.km-intent { grid-column: 1; }
+.km-rows { grid-column: 2 / -1; display: grid; grid-template-columns: subgrid; row-gap: var(--s1); }
+.km-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
+.km-keys { display: flex; flex-wrap: wrap; gap: 3px; }
+.km-does {
+  font-size: var(--text-ui); color: var(--text-1); line-height: var(--leading-ui);
+  text-wrap: pretty;
+}
+/* The margin column is the quieter voice: smaller words, second ink. */
+.km-everywhere .km-does { font-size: var(--text-small); color: var(--text-2); }
+.km-note {
+  grid-column: 2 / -1; margin-top: var(--s1);
+  font-size: var(--text-small); color: var(--text-3); line-height: var(--leading-prose); text-wrap: pretty;
+}
+
+/* The app's key caps (base.css), squared up for single letters and inked as entries. */
+.keymap kbd { display: inline-block; min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; color: var(--text-1); }
+.km-everywhere kbd, .km-foot kbd { color: var(--text-2); }
+
+.km-foot {
+  grid-column: 1 / -1; grid-row: 3;
+  margin-top: var(--s4); padding-top: var(--s3); border-top: var(--hair) solid var(--line);
+  font-size: var(--text-small); color: var(--text-3); line-height: var(--leading-small); text-wrap: pretty;
+}
+.km-foot kbd { margin: 0 1px; }
+
+/* Narrower than the card (a browser window; the app's window stops at 960 px): one column. */
+@media (max-width: 720px) {
+  .keymap { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .km-everywhere { grid-column: 1; grid-row: auto; grid-template-rows: none; margin-top: var(--s5); }
+  .km-everywhere > .km-col-head, .km-everywhere > .km-groups { grid-row: auto; }
+  .km-foot { grid-row: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keymap { animation-name: ft-fade; }
+}

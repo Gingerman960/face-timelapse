@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-reference-photo"
+description = "Enables the set_reference_photo command without any pre-configured scope."
+commands.allow = ["set_reference_photo"]
+
+[[permission]]
+identifier = "deny-set-reference-photo"
+description = "Denies the set_reference_photo command without any pre-configured scope."
+commands.deny = ["set_reference_photo"]
