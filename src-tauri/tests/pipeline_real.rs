@@ -45,8 +45,11 @@ fn sample_folder(photos: &Path, n: usize, into: &Path) -> usize {
     let picked: Vec<&PathBuf> = all.iter().step_by(stride).take(n).collect();
     std::fs::create_dir_all(into).expect("sample dir");
     for p in &picked {
+        let link = into.join(p.file_name().expect("name"));
         #[cfg(unix)]
-        std::os::unix::fs::symlink(p, into.join(p.file_name().expect("name"))).expect("symlink");
+        std::os::unix::fs::symlink(p, link).expect("symlink");
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(p, link).expect("symlink");
     }
     picked.len()
 }
